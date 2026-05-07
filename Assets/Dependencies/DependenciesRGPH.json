@@ -1,0 +1,132 @@
+{
+    "REG": [
+        "PRO",
+        "MIL"
+    ],
+    "MIL": [
+        "REG",
+        "PRO",
+        "TYPE.LOG"
+    ],
+    "PRO": [
+        "REG",
+        "MIL"
+    ],
+    "TELE": [
+        "REG",
+        "MIL",
+        "MEN.PRO",
+        "TAILLE",
+        "ELEC"
+    ],
+    "MEN.TYPE": [
+        "TAILLE",
+        "MEN.PRO",
+        "STAT.OCC"
+    ],
+    "TEL.PORT": [
+        "REG",
+        "MIL",
+        "TAILLE",
+        "MEN.TYPE"
+    ],
+    "PARAB": [
+        "REG",
+        "MIL",
+        "TYPE.LOG"
+    ],
+    "ECL.MODE": [
+        "REG",
+        "MIL",
+        "ELEC",
+        "TYPE.LOG"
+    ],
+    "EAU.MODE": [
+        "REG",
+        "MIL",
+        "TYPE.LOG",
+        "EAU.DIST"
+    ],
+    "NET": [
+        "REG",
+        "MIL",
+        "PC",
+        "TELE"
+    ],
+    "PC": [
+        "REG",
+        "MIL",
+        "NET",
+        "TAILLE"
+    ],
+    "FRIGO": [
+        "REG",
+        "MIL",
+        "ELEC",
+        "MEN.PRO"
+    ],
+    "RADIO": [
+        "REG",
+        "MIL",
+        "TELE",
+        "ELEC"
+    ],
+    "TEL.FIXE": [
+        "REG",
+        "MIL",
+        "TYPE.LOG",
+        "NET"
+    ],
+    "STAT.OCC": [
+        "TYPE.LOG",
+        "MEN.TYPE",
+        "TAILLE"
+    ],
+    "TYPE.LOG": [
+        "REG",
+        "MIL",
+        "MEN.PRO",
+        "TAILLE",
+        "MEN.TYPE"
+    ],
+    "MOTO": [
+        "MIL",
+        "REG",
+        "TAILLE"
+    ],
+    "CAM": [
+        "MIL",
+        "REG",
+        "TRACT",
+        "VOIT"
+    ],
+    "TRACT": [
+        "MIL",
+        "REG",
+        "PRO"
+    ],
+    "VOIT": [
+        "MIL",
+        "REG",
+        "MEN.PRO",
+        "TAILLE"
+    ],
+    "ROUTE.DIST": [
+        "REG",
+        "PRO",
+        "MIL",
+        "TYPE.LOG"
+    ],
+    "EAU.DIST": [
+        "REG",
+        "MIL",
+        "PRO",
+        "TYPE.LOG"
+    ],
+    "EAU.DUR": [
+        "REG",
+        "MIL",
+        "EAU.MODE",
+        "EAU.DIST"
+    ]
+}
