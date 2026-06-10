@@ -1,0 +1,18 @@
+{
+  "lgbm": {
+    "test": {
+      "Pauvre": {"AUC": 0.7810, "F1": 0.2357, "Precision": 0.1677, "Recall": 0.3965},
+      "Vulnérable": {"AUC": 0.7423, "F1": 0.3335, "Precision": 0.2277, "Recall": 0.6228}
+    }
+  },
+  "hypernetwork": {
+    "val": {
+      "Pauvre": {"AUC": 0.9036, "F1": 0.1186},
+      "Vulnérable": {"AUC": 0.8399, "F1": 0.1600}
+    },
+    "test": {
+      "Pauvre": {"AUC": 0.9381, "F1": 0.2194},
+      "Vulnérable": {"AUC": 0.8366, "F1": 0.1442}
+    }
+  }
+}
