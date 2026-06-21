@@ -1,0 +1,102 @@
+.
+├── .gitignore
+├── .streamlit
+│   └── config.toml
+├── Assets
+│   ├── Dependencies
+│   │   ├── DependenciesENCDM.json
+│   │   └── DependenciesRGPH.json
+│   ├── Maps
+│   │   ├── MapENCDM.json
+│   │   └── MapRGPH.json
+│   ├── Plots
+│   │   ├── Distribution of Poor Households by Size and Gender.png
+│   │   ├── Hypernetwork Training Loss.png
+│   │   ├── Individual Population Count by Region and Environment.png
+│   │   ├── Model Feature Importance.png
+│   │   ├── Poor Individuals by education, profession, diploma.png
+│   │   ├── Poverty Rate ENCDM vs RGPH Predicted.png
+│   │   ├── Socioeconomic Status by Region.png
+│   │   └── Spatial Distribution of Household Modernity.png
+│   └── Types
+│       ├── TypesENCDM.json
+│       └── TypesRGPH.json
+├── Dashboard
+│   ├── app.py
+│   └── utils
+├── Data
+│   ├── Processed
+│   │   ├── CleanENCDM.parquet
+│   │   └── CleanRGPH.parquet
+│   └── Raw
+│       ├── ENCDM.sav
+│       └── RGPH.sav
+├── Models
+│   ├── Classifier
+│   │   ├── ENCDM_LGBM_Pauvre.joblib
+│   │   ├── ENCDM_LGBM_Vulnérable.joblib
+│   │   ├── Hypernet.pt
+│   │   ├── Transfer_LGBM_Pauvre.joblib
+│   │   └── Transfer_LGBM_Vulnérable.joblib
+│   ├── Classifiers
+│   │   ├── ENCDM_LGBM_Pauvre.joblib
+│   │   ├── ENCDM_LGBM_Vulnérable.joblib
+│   │   ├── Transfer_LGBM_Pauvre.joblib
+│   │   └── Transfer_LGBM_Vulnérable.joblib
+│   ├── Imputers
+│   │   ├── ENCDM
+│   │   │   ├── KNN_Decilerural.joblib
+│   │   │   ├── KNN_Decileurbain.joblib
+│   │   │   ├── KNN_Profession_agreg_CM.joblib
+│   │   │   ├── KNN_Quintilerural.joblib
+│   │   │   ├── KNN_Quintileurbain.joblib
+│   │   │   └── KNN_Secteur_activité_agreg_CM.joblib
+│   │   └── RGPH
+│   │       ├── LGBM_CAM.joblib
+│   │       ├── LGBM_EAU.DIST.joblib
+│   │       ├── LGBM_EAU.DUR.joblib
+│   │       ├── LGBM_EAU.MODE.joblib
+│   │       ├── LGBM_ECL.MODE.joblib
+│   │       ├── LGBM_FRIGO.joblib
+│   │       ├── LGBM_MEN.TYPE.joblib
+│   │       ├── LGBM_MIL.joblib
+│   │       ├── LGBM_MOTO.joblib
+│   │       ├── LGBM_NET.joblib
+│   │       ├── LGBM_PARAB.joblib
+│   │       ├── LGBM_PC.joblib
+│   │       ├── LGBM_PRO.joblib
+│   │       ├── LGBM_RADIO.joblib
+│   │       ├── LGBM_REG.joblib
+│   │       ├── LGBM_ROUTE.DIST.joblib
+│   │       ├── LGBM_STAT.OCC.joblib
+│   │       ├── LGBM_TEL.FIXE.joblib
+│   │       ├── LGBM_TEL.PORT.joblib
+│   │       ├── LGBM_TELE.joblib
+│   │       ├── LGBM_TRACT.joblib
+│   │       ├── LGBM_TYPE.LOG.joblib
+│   │       └── LGBM_VOIT.joblib
+│   └── Scalers
+│       ├── ENCDM
+│       │   ├── SS_Age_CM.joblib
+│       │   ├── SS_Lieunaissance_CM.joblib
+│       │   ├── SS_Taille_ménage.joblib
+│       │   ├── SS_coef_indiv.joblib
+│       │   └── SS_coef_ménage.joblib
+│       └── RGPH
+│           ├── SS_MEN.PRO.joblib
+│           └── SS_TAILLE.joblib
+├── Notebooks
+│   ├── Analysis.ipynb
+│   ├── Modeling.ipynb
+│   └── Pre-processing.ipynb
+├── README.md
+├── Skills
+│   ├── layout.md
+│   ├── plan.md
+│   ├── plots.md
+│   ├── style.md
+│   └── syntax.md
+├── app.py
+├── requirements.txt
+├── run.txt
+└── tree.py

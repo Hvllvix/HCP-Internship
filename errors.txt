@@ -1,0 +1,134 @@
+ValueError: string indices must be integers, not 'str'
+
+Invalid value received for the 'color' property of bar.marker
+
+    The 'color' property is a color and may be specified as:
+      - A hex string (e.g. '#ff0000')
+      - An rgb/rgba string (e.g. 'rgb(255,0,0)')
+      - An hsl/hsla string (e.g. 'hsl(0,100%,50%)')
+      - An hsv/hsva string (e.g. 'hsv(0,100%,100%)')
+      - A named CSS color: see https://plotly.com/python/css-colors/ for a list
+      - A number that will be interpreted as a color
+        according to bar.marker.colorscale
+      - A list or array of any of the above
+
+Property does not support subscripting:
+marker_color_discrete_sequence
+       ^^^^^
+
+File "C:\Users\hp\Desktop\Things\Projects\Python\Internship-HCP\Dashboard\app.py", line 714, in <module>
+    fig = plot_func()
+File "C:\Users\hp\AppData\Local\Programs\Python\Python314\Lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 281, in __call__
+    return self._get_or_create_cached_value(args, kwargs, spinner_message)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "C:\Users\hp\AppData\Local\Programs\Python\Python314\Lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 326, in _get_or_create_cached_value
+    return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "C:\Users\hp\AppData\Local\Programs\Python\Python314\Lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 385, in _handle_cache_miss
+    computed_value = self._info.func(*func_args, **func_kwargs)
+File "C:\Users\hp\Desktop\Things\Projects\Python\Internship-HCP\Dashboard\utils\plots.py", line 785, in plot16_model_feature_importance
+    fig = go.Figure(go.Bar(
+                    ~~~~~~^
+        x=importance_df["importance"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+        hovertemplate="<b>%{y}</b><br>Importance: %{x}<extra></extra>",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ))
+    ^
+File "C:\Users\hp\AppData\Local\Programs\Python\Python314\Lib\site-packages\plotly\graph_objs\_bar.py", line 2689, in __init__
+    self._process_kwargs(**dict(arg, **kwargs))
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+File "C:\Users\hp\AppData\Local\Programs\Python\Python314\Lib\site-packages\plotly\basedatatypes.py", line 4451, in _process_kwargs
+    raise err
+
+
+ValueError: string indices must be integers, not 'str'
+
+Invalid value received for the 'color' property of bar.marker
+
+    The 'color' property is a color and may be specified as:
+      - A hex string (e.g. '#ff0000')
+      - An rgb/rgba string (e.g. 'rgb(255,0,0)')
+      - An hsl/hsla string (e.g. 'hsl(0,100%,50%)')
+      - An hsv/hsva string (e.g. 'hsv(0,100%,100%)')
+      - A named CSS color: see https://plotly.com/python/css-colors/ for a list
+      - A number that will be interpreted as a color
+        according to bar.marker.colorscale
+      - A list or array of any of the above
+
+Property does not support subscripting:
+marker_color_discrete_sequence
+       ^^^^^
+
+File "C:\Users\hp\Desktop\Things\Projects\Python\Internship-HCP\Dashboard\app.py", line 714, in <module>
+    fig = plot_func()
+File "C:\Users\hp\AppData\Local\Programs\Python\Python314\Lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 281, in __call__
+    return self._get_or_create_cached_value(args, kwargs, spinner_message)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "C:\Users\hp\AppData\Local\Programs\Python\Python314\Lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 326, in _get_or_create_cached_value
+    return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "C:\Users\hp\AppData\Local\Programs\Python\Python314\Lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 385, in _handle_cache_miss
+    computed_value = self._info.func(*func_args, **func_kwargs)
+File "C:\Users\hp\Desktop\Things\Projects\Python\Internship-HCP\Dashboard\utils\plots.py", line 785, in plot16_model_feature_importance
+    fig = go.Figure(go.Bar(
+                    ~~~~~~^
+        x=importance_df["importance"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+        hovertemplate="<b>%{y}</b><br>Importance: %{x}<extra></extra>",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ))
+    ^
+File "C:\Users\hp\AppData\Local\Programs\Python\Python314\Lib\site-packages\plotly\graph_objs\_bar.py", line 2689, in __init__
+    self._process_kwargs(**dict(arg, **kwargs))
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+File "C:\Users\hp\AppData\Local\Programs\Python\Python314\Lib\site-packages\plotly\basedatatypes.py", line 4451, in _process_kwargs
+    raise err
+
+
+
+ValueError: string indices must be integers, not 'str'
+
+Invalid value received for the 'color' property of bar.marker
+
+    The 'color' property is a color and may be specified as:
+      - A hex string (e.g. '#ff0000')
+      - An rgb/rgba string (e.g. 'rgb(255,0,0)')
+      - An hsl/hsla string (e.g. 'hsl(0,100%,50%)')
+      - An hsv/hsva string (e.g. 'hsv(0,100%,100%)')
+      - A named CSS color: see https://plotly.com/python/css-colors/ for a list
+      - A number that will be interpreted as a color
+        according to bar.marker.colorscale
+      - A list or array of any of the above
+
+Property does not support subscripting:
+marker_color_discrete_sequence
+       ^^^^^
+
+File "C:\Users\hp\Desktop\Things\Projects\Python\Internship-HCP\Dashboard\app.py", line 714, in <module>
+    fig = plot_func()
+File "C:\Users\hp\AppData\Local\Programs\Python\Python314\Lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 281, in __call__
+    return self._get_or_create_cached_value(args, kwargs, spinner_message)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "C:\Users\hp\AppData\Local\Programs\Python\Python314\Lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 326, in _get_or_create_cached_value
+    return self._handle_cache_miss(cache, value_key, func_args, func_kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "C:\Users\hp\AppData\Local\Programs\Python\Python314\Lib\site-packages\streamlit\runtime\caching\cache_utils.py", line 385, in _handle_cache_miss
+    computed_value = self._info.func(*func_args, **func_kwargs)
+File "C:\Users\hp\Desktop\Things\Projects\Python\Internship-HCP\Dashboard\utils\plots.py", line 785, in plot16_model_feature_importance
+    fig = go.Figure(go.Bar(
+                    ~~~~~~^
+        x=importance_df["importance"],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+        hovertemplate="<b>%{y}</b><br>Importance: %{x}<extra></extra>",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ))
+    ^
+File "C:\Users\hp\AppData\Local\Programs\Python\Python314\Lib\site-packages\plotly\graph_objs\_bar.py", line 2689, in __init__
+    self._process_kwargs(**dict(arg, **kwargs))
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+File "C:\Users\hp\AppData\Local\Programs\Python\Python314\Lib\site-packages\plotly\basedatatypes.py", line 4451, in _process_kwargs
+    raise err
