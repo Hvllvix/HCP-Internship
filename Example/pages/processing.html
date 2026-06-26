@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simpute Space - Ingestion Feed & Sandbox</title>
+  <link rel="stylesheet" href="../assets/main.css">
+  <style>
+    /* Section-specific UI overrides */
+    .simpute-highlight-card {
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: var(--surface-white);
+      border: none;
+      border-radius: var(--radius-standard);
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.1);
+    }
+    
+    .simpute-link {
+      background: rgba(255, 255, 255, 0.15);
+      color: var(--surface-white);
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: var(--radius-small);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      transition: background 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      margin-top: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+    
+    .simpute-link:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .sandbox-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 16px;
+    }
+
+    .terminal-output {
+      background: #111827 !important;
+      color: #10B981 !important;
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      font-size: 0.8125rem;
+      padding: 16px;
+      border-radius: var(--radius-standard);
+      height: 100%;
+      min-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #374151;
+    }
+
+    .missingness-bar-container {
+      margin-bottom: 14px;
+    }
+
+    .missingness-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8125rem;
+      margin-bottom: 4px;
+      color: var(--text-secondary);
+    }
+
+    .missingness-track {
+      background: #E5E7EB;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .missingness-fill-missing {
+      background-color: var(--accent-coral);
+      height: 100%;
+    }
+
+    .missingness-fill-present {
+      background-color: var(--accent-mint);
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard-wrapper">
+    
+    <!-- MODULE 1: LEFT NAVIGATION SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">simpute space</div>
+      
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">Home</div>
+        <a href="overview.html" class="sidebar-link">Workspace Overview</a>
+        <a href="processing.html" class="sidebar-link active">Data Ingestion Feed</a>
+      </div>
+      
+      <div class="sidebar-group">
+        <div class="sidebar-group-title">Pipelines</div>
+        <a href="analytics.html" class="sidebar-link">Geographic Analytics</a>
+        <a href="modeling.html" class="sidebar-link">Model Routing Engine</a>
+      </div>
+    </aside>
+
+    <!-- MODULE 2: MAIN APPLICATION CONTENT STREAM -->
+    <main class="main-content">
+      <div class="header-ribbon">
+        <h1 class="page-title">Data Ingestion & Imputation Pipeline</h1>
+        <div class="btn-group">
+          <button class="btn btn-secondary" onclick="resetSandbox()">Reset Config</button>
+        </div>
+      </div>
+
+      <!-- ROW 1: SIMPUTE PYPI SHOWCASE -->
+      <section class="simpute-highlight-card">
+        <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 8px;">The Simpute Engine Ecosystem</h2>
+        <p style="font-size: 0.875rem; line-height: 1.6; max-width: 800px; opacity: 0.95;">
+          This processing workflow is powered by <strong>simpute</strong>, an open-source library developed by <strong>Hvllvix</strong>. Rather than forcing a static mean or global baseline, Simpute analyzes the specific microdata properties of each column in parallel, executing dynamic feature selection through mutual information before routing them to targeted models such as LightGBM, CatBoost, or ExtraTrees.
+        </p>
+        <p style="font-size: 0.875rem; line-height: 1.6; margin-top: 8px; max-width: 800px; opacity: 0.95;">
+          The framework treats each structural column inside our socioeconomic survey layers as its own machine learning objective, allowing early imputed variables to intelligently serve as training features for subsequent fills.
+        </p>
+        <a href="https://pypi.org/project/simpute/" target="_blank" class="simpute-link">
+          View simpute on PyPI Registry
+        </a>
+      </section>
+
+      <!-- ROW 2: MISSINGNESS DATA TREATMENTS -->
+      <section class="card-container">
+        <h2 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 8px; color: var(--text-primary);">
+          Raw Dataset Missingness Diagnostics
+        </h2>
+        <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 18px;">
+          This view tracks the exact proportion of null entries encountered across key socioeconomic columns in the raw files before the <strong>simpute</strong> pipeline runs.
+        </p>
+
+        <!-- Column Profiles Missingness Bars -->
+        <div class="missingness-bar-container">
+          <div class="missingness-label-row">
+            <span>S04Q03_AGE (Respondent Age - Continuous)</span>
+            <span>0.0% Missing (100% Intact)</span>
+          </div>
+          <div class="missingness-track">
+            <div class="missingness-fill-present" style="width: 100%"></div>
+          </div>
+        </div>
+
+        <div class="missingness-bar-container">
+          <div class="missingness-label-row">
+            <span>REVENU_MOL (Household Income Estimate - High Skew)</span>
+            <span>22.4% Missing (Treated via LightGBM Regressor)</span>
+          </div>
+          <div class="missingness-track">
+            <div class="missingness-fill-missing" style="width: 22.4%"></div>
+            <div class="missingness-fill-present" style="width: 77.6%"></div>
+          </div>
+        </div>
+
+        <div class="missingness-bar-container">
+          <div class="missingness-label-row">
+            <span>EAU_MODE (Water Supply Source - Low Cardinality Categorical)</span>
+            <span>15.1% Missing (Treated via Logistic Regression)</span>
+          </div>
+          <div class="missingness-track">
+            <div class="missingness-fill-missing" style="width: 15.1%"></div>
+            <div class="missingness-fill-present" style="width: 84.9%"></div>
+          </div>
+        </div>
+
+        <div class="missingness-bar-container">
+          <div class="missingness-label-row">
+            <span>S04Q09_NIV_INSTRU (Education Profile - Nominal Category)</span>
+            <span>8.7% Missing (Treated via CatBoost Classifier)</span>
+          </div>
+          <div class="missingness-track">
+            <div class="missingness-fill-missing" style="width: 8.7%"></div>
+            <div class="missingness-fill-present" style="width: 91.3%"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ROW 3: INTERACTIVE PIPELINE SANDBOX -->
+      <section class="card-container">
+        <h2 style="font-size: 1.125rem; font-weight: 600; color: var(--text-primary);">
+          Interactive Imputer Sandbox Playground
+        </h2>
+        <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 12px;">
+          Simulate raw pipeline computations in real time. Tweak numeric values, select your processing scaler, apply a masking index, and trigger the reconstruction simulation.
+        </p>
+
+        <div class="sandbox-grid">
+          <!-- Sandbox Controls (Force explicit bg/text to prevent dark overrides) -->
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div>
+              <label style="display: block; font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">
+                Select Variable Matrix Field
+              </label>
+              <select id="var-select" onchange="updateDefaultValue()">
+                <option value="S04Q03_AGE">Respondent Age (Continuous)</option>
+                <option value="REVENU_MOL">Household Income Score (Skewed continuous)</option>
+                <option value="Household_Size">Household Size Profile (Discrete)</option>
+              </select>
+            </div>
+
+            <div>
+              <label style="display: block; font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">
+                Raw Observation Input Value
+              </label>
+              <input type="number" id="raw-value" value="45" step="1">
+            </div>
+
+            <div>
+              <label style="display: block; font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">
+                Feature Normalization Scaler
+              </label>
+              <select id="scaler-select">
+                <option value="StandardScaler">StandardScaler (Mean: 0, Std: 1)</option>
+                <option value="MinMaxScaler">MinMaxScaler (Bound: [0, 1])</option>
+                <option value="None">No Scaling Transformations</option>
+              </select>
+            </div>
+
+            <div>
+              <label style="display: block; font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">
+                Pipeline Missingness Mask Ratio (M_i)
+              </label>
+              <select id="mask-select">
+                <option value="0.15">0.15 (Target baseline default)</option>
+                <option value="0.30">0.30 (Elevated degradation threshold)</option>
+                <option value="0.75">0.75 (Critical: Simpute trigger warnings)</option>
+              </select>
+            </div>
+
+            <div>
+              <label style="display: block; font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">
+                Routing Imputer Model Engine
+              </label>
+              <select id="engine-select">
+                <option value="KNN">KNNRegressor (Preserves neighborhood variance)</option>
+                <option value="LGBM">LightGBMRegressor (Optimal for non-linear tables)</option>
+                <option value="BayesianRidge">BayesianRidge (Regularized continuous distribution)</option>
+              </select>
+            </div>
+
+            <button class="btn btn-primary" onclick="runSandboxEngine()" style="justify-content: center; margin-top: 6px;">
+              Execute Ingestion & Impute Pipeline
+            </button>
+          </div>
+
+          <!-- Console Terminal Output -->
+          <div>
+            <label style="display: block; font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">
+              System Execution Stream Console
+            </label>
+            <div id="console-terminal" class="terminal-output">
+[Ready] System pipeline initialized.
+[Ready] Awaiting telemetry parameters to execute...
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- MODULE 3: RIGHT CONTROL PANEL & RUNTIME STATS -->
+    <aside class="control-pane">
+      <div class="card">
+        <h3 style="font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 12px;">
+          Ingested File Tracking
+        </h3>
+        <p style="font-size: 0.8125rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px;">
+          Files parsed during the preprocessing pipeline phase:
+        </p>
+        <div style="font-size: 0.75rem; font-family: monospace; padding: 10px; background: var(--canvas-bg); border-radius: var(--radius-small);">
+          • Data/Processed/CleanENCDM.parquet<br>
+          • Data/Processed/CleanRGPH.parquet<br>
+          • Models/Classifier/ENCDM_LGBM_Pauvre.joblib
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 12px;">
+          Simpute Performance Summary
+        </h3>
+        <p style="font-size: 0.8125rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px;">
+          Global metrics computed across held-out testing folds (`tests/data/test.csv`):
+        </p>
+        <div class="data-table-wrapper" style="margin-top: 0;">
+          <table class="data-table" style="font-size: 0.75rem;">
+            <thead>
+              <tr>
+                <th>Profile Metric</th>
+                <th>Validation Delta</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Continuous MAE</td>
+                <td style="color: var(--accent-mint); font-weight: 600;">0.041</td>
+              </tr>
+              <tr>
+                <td>Category Accuracy</td>
+                <td style="color: var(--accent-mint); font-weight: 600;">94.12%</td>
+              </tr>
+              <tr>
+                <td>Variance Delta</td>
+                <td style="color: var(--accent-mint); font-weight: 600;">-0.003</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Ingest Javascript Engine -->
+  <script src="../scripts/sandbox.js"></script>
+</body>
+</html>
