@@ -7,8 +7,15 @@ import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.metrics import roc_auc_score, roc_curve
 
-from data_loader import ENCDM_CONFIG, get_label, inverse_scale_encdm
+from data_loader import ENCDM_CONFIG, get_label, household_weights, inverse_scale_encdm, weighted_poverty_rate
 from theme import PALETTE, plotly_layout
+
+CHART_H = 300
+CHART_H_TALL = 380
+
+
+def _layout(height=None, **kwargs):
+    return plotly_layout(height=height or CHART_H, **kwargs)
 
 
 def fig_missing_values(encdm, top_n=10):
@@ -24,17 +31,109 @@ def fig_missing_values(encdm, top_n=10):
         md, x="Feature", y="Missing %", color="Missing %",
         color_continuous_scale=[PALETTE["gray"], PALETTE["amber"], PALETTE["navy"]],
     )
-    fig.update_layout(**plotly_layout(height=280, showlegend=False))
+    fig.update_layout(**_layout())
     fig.update_xaxes(tickangle=-35)
     return fig
 
 
+def fig_vulnerability_breakdown(encdm):
+    w = household_weights(encdm)
+    tmp = encdm.assign(_w=w)
+    vuln = tmp.loc[tmp["Vulnérable"] == 1, "_w"].sum()
+    nonvuln = tmp.loc[tmp["Vulnérable"] == 0, "_w"].sum()
+    df = pd.DataFrame({"Status": ["Not Vulnerable", "Vulnerable"], "Weight": [nonvuln, vuln]})
+    fig = px.pie(
+        df, values="Weight", names="Status",
+        color_discrete_sequence=[PALETTE["navy"], PALETTE["amber"]],
+    )
+    fig.update_layout(**_layout())
+    return fig
+
+
+def fig_national_employment(encdm, label_maps):
+    w = household_weights(encdm)
+    sub = encdm.copy()
+    sub["employment"] = translate_series(
+        sub["Situation_profession_agreg_CM"], "Situation_profession_agreg_CM", label_maps
+    )
+    grouped = sub.assign(_w=w).groupby("employment")["_w"].sum().sort_values(ascending=False).head(10).reset_index()
+    grouped.columns = ["Employment", "Weight"]
+    fig = px.bar(grouped, x="Weight", y="Employment", orientation="h", color_discrete_sequence=[PALETTE["navy"]])
+    fig.update_layout(**_layout(CHART_H_TALL, showlegend=False))
+    return fig
+
+
+def fig_household_size_national(encdm):
+    sub = inverse_scale_encdm(encdm)
+    fig = px.histogram(sub, x="Taille_ménage", nbins=14, color_discrete_sequence=[PALETTE["amber"]])
+    fig.update_layout(**_layout(xaxis_title="Household size", yaxis_title="Count"))
+    return fig
+
+
+def fig_rgph_infrastructure(rgph):
+    cols = {"ELEC": "Electricity", "NET": "Internet", "VOIT": "Vehicle", "FRIGO": "Fridge"}
+    rows = []
+    for col, label in cols.items():
+        if col in rgph.columns:
+            rows.append({"Asset": label, "Access (%)": round(rgph[col].mean() * 100, 1)})
+    if not rows:
+        return None
+    df = pd.DataFrame(rows)
+    fig = px.bar(df, x="Asset", y="Access (%)", color="Access (%)",
+                 color_continuous_scale=[PALETTE["gray"], PALETTE["navy"]], text_auto=".1f", range_color=[0, 100])
+    fig.update_layout(**_layout(coloraxis_showscale=False))
+    return fig
+
+
+def fig_region_household_size(encdm, region_code):
+    sub = inverse_scale_encdm(encdm[encdm["Région_12"] == region_code])
+    if len(sub) == 0:
+        return None
+    fig = px.histogram(sub, x="Taille_ménage", nbins=12, color_discrete_sequence=[PALETTE["amber"]])
+    fig.update_layout(**_layout(xaxis_title="Household size", yaxis_title="Count"))
+    return fig
+
+
+def fig_raw_missing_values(raw_encdm, raw_rgph, top_n=12):
+    """Missingness in raw .sav files before Simpute / cleaning."""
+    from plotly.subplots import make_subplots
+
+    fig = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=("ENCDM Raw", "RGPH Raw"),
+        horizontal_spacing=0.12,
+    )
+    for col_idx, (df, name) in enumerate([(raw_encdm, "ENCDM"), (raw_rgph, "RGPH")], 1):
+        if df is None or len(df) == 0:
+            continue
+        miss_pct = (df.isna().sum() / len(df) * 100).sort_values(ascending=False).head(top_n)
+        colors = [
+            PALETTE["danger"] if v > 5 else PALETTE["amber"] if v > 1 else PALETTE["navy"]
+            for v in miss_pct.values
+        ]
+        fig.add_trace(
+            go.Bar(
+                x=miss_pct.values,
+                y=[get_label(c) if get_label(c) != c else str(c)[:28] for c in miss_pct.index],
+                orientation="h",
+                marker_color=colors,
+                text=[f"{v:.1f}%" for v in miss_pct.values],
+                textposition="outside",
+                showlegend=False,
+            ),
+            row=1, col=col_idx,
+        )
+        fig.update_xaxes(title_text="Missing %", range=[0, min(105, miss_pct.max() * 1.15 + 5)], row=1, col=col_idx)
+    fig.update_layout(**_layout(CHART_H_TALL, title="Raw Dataset Missingness (Pre-Imputation)"))
+    return fig
+
+
 def fig_poverty_breakdown(encdm):
-    poor_w = (encdm[encdm["Pauvre"] == 1]["coef_ménage"]).sum()
-    vuln_w = (encdm[encdm["Vulnérable"] == 1]["coef_ménage"]).sum()
-    nonpoor_w = (
-        encdm[(encdm["Pauvre"] == 0) & (encdm["Vulnérable"] == 0)]["coef_ménage"]
-    ).sum()
+    w = household_weights(encdm)
+    tmp = encdm.assign(_w=w)
+    poor_w = tmp.loc[tmp["Pauvre"] == 1, "_w"].sum()
+    vuln_w = tmp.loc[tmp["Vulnérable"] == 1, "_w"].sum()
+    nonpoor_w = tmp.loc[(tmp["Pauvre"] == 0) & (tmp["Vulnérable"] == 0), "_w"].sum()
     sd = pd.DataFrame({
         "Status": ["Non-Poor", "Vulnerable", "Poor"],
         "Weight": [nonpoor_w, vuln_w, poor_w],
@@ -61,7 +160,7 @@ def fig_region_poverty(region_stats):
 
 
 def fig_choropleth(geojson, region_stats, geojson_regions, selected_code=None):
-    z_data, locations, hover = [], [], []
+    z_data, locations, hover, custom_ids = [], [], [], []
     sel_id = None
     for feat in geojson["features"]:
         props = feat["properties"]
@@ -69,6 +168,7 @@ def fig_choropleth(geojson, region_stats, geojson_regions, selected_code=None):
         cid = props["cartodb_id"]
         code = geojson_regions.get(gname)
         locations.append(cid)
+        custom_ids.append(str(cid))
         if code is not None and code in region_stats:
             rate = region_stats[code]["poverty_rate"]
             z_data.append(rate)
@@ -86,6 +186,7 @@ def fig_choropleth(geojson, region_stats, geojson_regions, selected_code=None):
         locations=locations,
         z=z_data,
         text=hover,
+        customdata=custom_ids,
         hovertemplate="<b>%{text}</b><br>Poverty: %{z:.1f}%<extra></extra>",
         colorscale=[
             [0, PALETTE["white"]],
@@ -97,6 +198,7 @@ def fig_choropleth(geojson, region_stats, geojson_regions, selected_code=None):
         zmin=5, zmax=45,
         marker=dict(line=dict(width=1.2, color=PALETTE["navy"])),
         colorbar=dict(title="Poverty %", thickness=12, len=0.55),
+        name="regions",
     ))
     if sel_id is not None and selected_code in region_stats:
         fig.add_trace(go.Choropleth(
@@ -108,9 +210,14 @@ def fig_choropleth(geojson, region_stats, geojson_regions, selected_code=None):
             marker=dict(line=dict(width=3, color=PALETTE["black"])),
             showscale=False,
             hovertemplate="<b>SELECTED</b><br>%{z:.1f}%<extra></extra>",
+            name="selected",
         ))
     fig.update_layout(
-        **plotly_layout(height=480, margin=dict(l=0, r=0, t=0, b=0)),
+        **plotly_layout(
+            height=480,
+            margin=dict(l=0, r=0, t=30, b=0),
+            title="Click a region or use the selector below",
+        ),
         geo=dict(
             projection_type="mercator",
             showland=True,
@@ -121,6 +228,7 @@ def fig_choropleth(geojson, region_stats, geojson_regions, selected_code=None):
             lonaxis_range=[-17, -1],
             lataxis_range=[21, 36],
         ),
+        clickmode="event+select",
     )
     return fig
 
@@ -159,12 +267,17 @@ def fig_roc_curves(encdm, bundles, sample_n=2000):
             continue
         X = sample[bundle["features"]].astype("float32")
         y = sample[target].astype(int)
-        w = sample["coef_indiv"]
         prob = bundle["model"].predict_proba(X)[:, 1]
-        fpr, tpr, _ = roc_curve(y, prob, sample_weight=w)
-        auc = roc_auc_score(y, prob, sample_weight=w)
+        try:
+            auc = roc_auc_score(y, prob)
+        except ValueError:
+            auc = float("nan")
+        fpr, tpr, _ = roc_curve(y, prob)
+        order = np.argsort(fpr)
+        fpr_s = np.clip(fpr[order], 0, 1)
+        tpr_s = np.maximum.accumulate(tpr[order])
         fig.add_trace(go.Scatter(
-            x=fpr, y=tpr, mode="lines",
+            x=fpr_s, y=tpr_s, mode="lines",
             name=f"LGBM {target} (AUC {auc:.3f})",
             line=dict(width=2.5, color=PALETTE["navy"] if target == "Pauvre" else PALETTE["amber"]),
         ))
@@ -216,19 +329,15 @@ def fig_region_education(encdm, region_code, label_maps):
     sub = encdm[encdm["Région_12"] == region_code].copy()
     if len(sub) == 0:
         return None
+    w = household_weights(sub)
     sub["edu_label"] = translate_series(sub["Niveau_scolaire_agreg_CM"], "Niveau_scolaire_agreg_CM", label_maps)
-    sub["status"] = sub["Pauvre"].map({1: "Poor", 0: "Non-Poor"})
-    grouped = (
-        sub.groupby(["edu_label", "status"])["coef_ménage"]
-        .sum()
-        .reset_index()
-    )
+    grouped = sub.assign(_w=w).groupby("edu_label")["_w"].sum().reset_index()
+    grouped.columns = ["Education", "Weighted Households"]
     fig = px.bar(
-        grouped, x="edu_label", y="coef_ménage", color="status", barmode="group",
-        color_discrete_map={"Poor": PALETTE["danger"], "Non-Poor": PALETTE["navy"]},
-        labels={"coef_ménage": "Weighted Households", "edu_label": "Education"},
+        grouped, x="Education", y="Weighted Households",
+        color_discrete_sequence=[PALETTE["navy"]],
     )
-    fig.update_layout(**plotly_layout(height=280, legend=dict(orientation="h", y=1.12)))
+    fig.update_layout(**plotly_layout(height=280, showlegend=False))
     fig.update_xaxes(tickangle=-25)
     return fig
 
@@ -237,19 +346,14 @@ def fig_region_gender(encdm, region_code):
     sub = encdm[encdm["Région_12"] == region_code]
     if len(sub) == 0:
         return None
+    w = household_weights(sub)
     rows = []
     for sexe, label in [(1, "Male"), (2, "Female")]:
-        s = sub[sub["Sexe_CM"] == sexe]
-        w = s["coef_ménage"].sum()
-        if w == 0:
-            continue
-        rate = (s["Pauvre"] * s["coef_ménage"]).sum() / w * 100
-        rows.append({"Gender": label, "Poverty Rate (%)": round(rate, 1)})
-    if not rows:
-        return None
+        mask = sub["Sexe_CM"] == sexe
+        rows.append({"Gender": label, "Weighted Share (%)": round(w[mask].sum() / w.sum() * 100, 1)})
     df = pd.DataFrame(rows)
     fig = px.bar(
-        df, x="Gender", y="Poverty Rate (%)", color="Gender",
+        df, x="Gender", y="Weighted Share (%)", color="Gender",
         color_discrete_map={"Male": PALETTE["navy"], "Female": PALETTE["amber"]},
         text_auto=".1f",
     )
@@ -257,16 +361,35 @@ def fig_region_gender(encdm, region_code):
     return fig
 
 
+def fig_region_amenities(rgph, region_code):
+    sub = rgph[rgph["REG"] == region_code]
+    if len(sub) == 0:
+        return None
+    has_water = sub["EAU.MODE"].isin([1, 2]).mean() * 100
+    df = pd.DataFrame({
+        "Amenity": ["Electricity", "Improved Water", "Internet"],
+        "Access (%)": [sub["ELEC"].mean() * 100, has_water, sub["NET"].mean() * 100],
+    })
+    fig = px.bar(
+        df, x="Amenity", y="Access (%)", color="Access (%)",
+        color_continuous_scale=[PALETTE["gray"], PALETTE["navy"]],
+        text_auto=".1f", range_color=[0, 100],
+    )
+    fig.update_layout(**plotly_layout(height=280, coloraxis_showscale=False))
+    return fig
+
+
 def fig_urban_rural_poverty(encdm, region_names):
     rows = []
     for code in sorted(encdm["Région_12"].unique()):
         sub = encdm[encdm["Région_12"] == code]
+        w = household_weights(sub)
         for milieu, label in [(0, "Urban"), (1, "Rural")]:
-            s = sub[sub["Milieu"] == milieu]
-            w = s["coef_ménage"].sum()
-            if w == 0:
+            mask = sub["Milieu"] == milieu
+            wt = w[mask].sum()
+            if wt == 0:
                 continue
-            rate = (s["Pauvre"] * s["coef_ménage"]).sum() / w * 100
+            rate = (sub.loc[mask, "Pauvre"] * w[mask]).sum() / wt * 100
             rows.append({
                 "Region": region_names.get(code, str(code)),
                 "Milieu": label,
@@ -338,19 +461,78 @@ def translate_series(series, colname, label_maps):
 
 def compute_region_stats(encdm, region_names):
     stats = {}
+    w_all = household_weights(encdm)
     for code in sorted(encdm["Région_12"].unique()):
-        sub = encdm[encdm["Région_12"] == code]
-        w = sub["coef_ménage"].sum()
-        if w == 0:
+        mask = encdm["Région_12"] == code
+        sub = encdm[mask]
+        w = w_all[mask]
+        total = w.sum()
+        if total <= 0:
             continue
         stats[int(code)] = {
             "name": region_names.get(code, f"Region {code}"),
-            "poverty_rate": round((sub["Pauvre"] * sub["coef_ménage"]).sum() / w * 100, 2),
+            "poverty_rate": round(weighted_poverty_rate(sub, w), 2),
             "households": len(sub),
-            "urban_pct": round(
-                sub[sub["Milieu"] == 0]["coef_ménage"].sum() / w * 100, 1
-            ) if "Milieu" in sub.columns else 0,
-            "avg_age": round(inverse_scale_encdm(sub)["Age_CM"].mean(), 1),
-            "avg_size": round(inverse_scale_encdm(sub)["Taille_ménage"].mean(), 1),
+            "urban_pct": round(float(w[sub["Milieu"] == 0].sum() / total * 100), 1) if "Milieu" in sub.columns else 0,
+            "avg_age": round(float(inverse_scale_encdm(sub)["Age_CM"].mean()), 1),
+            "avg_size": round(float(inverse_scale_encdm(sub)["Taille_ménage"].mean()), 1),
         }
     return stats
+
+
+def fig_employment_mix(encdm, region_code, label_maps):
+    sub = encdm[encdm["Région_12"] == region_code].copy()
+    if len(sub) == 0:
+        return None
+    w = household_weights(sub)
+    sub["employment"] = translate_series(
+        sub["Situation_profession_agreg_CM"], "Situation_profession_agreg_CM", label_maps
+    )
+    grouped = sub.assign(_w=w).groupby("employment")["_w"].sum().sort_values(ascending=False).head(8).reset_index()
+    grouped.columns = ["Employment", "Weight"]
+    fig = px.bar(grouped, x="Weight", y="Employment", orientation="h", color_discrete_sequence=[PALETTE["amber"]])
+    fig.update_layout(**plotly_layout(height=300, showlegend=False))
+    return fig
+
+
+def fig_milieu_split(encdm, region_code):
+    sub = encdm[encdm["Région_12"] == region_code]
+    if len(sub) == 0:
+        return None
+    w = household_weights(sub)
+    urban = w[sub["Milieu"] == 0].sum()
+    rural = w[sub["Milieu"] == 1].sum()
+    df = pd.DataFrame({"Area": ["Urban", "Rural"], "Weight": [urban, rural]})
+    fig = px.pie(df, values="Weight", names="Area", color_discrete_sequence=[PALETTE["navy"], PALETTE["amber"]])
+    fig.update_layout(**plotly_layout(height=280))
+    return fig
+
+
+def fig_age_distribution(encdm, region_code):
+    sub = inverse_scale_encdm(encdm[encdm["Région_12"] == region_code])
+    if len(sub) == 0:
+        return None
+    fig = px.histogram(sub, x="Age_CM", nbins=28, color_discrete_sequence=[PALETTE["navy"]])
+    fig.update_layout(**plotly_layout(height=280, xaxis_title="Age (years)", yaxis_title="Individuals"))
+    return fig
+
+
+def fig_rgph_rooms(rgph, region_code):
+    sub = rgph[rgph["REG"] == region_code]
+    if len(sub) == 0 or "PIECES" not in sub.columns:
+        return None
+    fig = px.histogram(sub, x="PIECES", nbins=12, color_discrete_sequence=[PALETTE["navy_light"]])
+    fig.update_layout(**plotly_layout(height=280, xaxis_title="Rooms", yaxis_title="Households"))
+    return fig
+
+
+def fig_national_education(encdm, label_maps):
+    w = household_weights(encdm)
+    sub = encdm.copy()
+    sub["edu"] = translate_series(sub["Niveau_scolaire_agreg_CM"], "Niveau_scolaire_agreg_CM", label_maps)
+    grouped = sub.assign(_w=w).groupby("edu")["_w"].sum().sort_values(ascending=False).reset_index()
+    grouped.columns = ["Education", "Weight"]
+    fig = px.bar(grouped, x="Education", y="Weight", color_discrete_sequence=[PALETTE["navy"]])
+    fig.update_layout(**plotly_layout(height=320, showlegend=False))
+    fig.update_xaxes(tickangle=-30)
+    return fig

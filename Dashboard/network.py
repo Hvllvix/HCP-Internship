@@ -70,6 +70,8 @@ def _build_graph(dep_data, title, highlight_node=None):
     focus_set = None
     if highlight_node and highlight_node in adj:
         focus_set = adj[highlight_node] | {highlight_node}
+        nodes = [n for n in nodes if n["id"] in focus_set]
+        edges = [e for e in edges if e["source"] in focus_set and e["target"] in focus_set]
 
     src_nodes = [n for n in nodes if n["group"] == "source"]
     tgt_nodes = [n for n in nodes if n["group"] == "target"]
@@ -92,15 +94,15 @@ def _build_graph(dep_data, title, highlight_node=None):
         label = f"{get_label(e['source'])} → {get_label(e['target'])}"
         edge_hover += [label, label, ""]
 
-    edge_color = PALETTE["gray"] if focus_set else "#B0BEC5"
+    edge_color = "#B0BEC5" if focus_set is None else PALETTE["navy"]
     edge_trace = go.Scatter(
         x=edge_x, y=edge_y, mode="lines",
-        line=dict(color=edge_color, width=1.5),
+        line=dict(color=edge_color, width=2.0 if focus_set else 1.5),
         hoverinfo="text", hovertext=edge_hover, showlegend=False,
     )
 
     node_x, node_y, node_labels, node_ids = [], [], [], []
-    node_colors, node_sizes, node_opacity = [], [], []
+    node_colors, node_sizes = [], []
     for n in nodes:
         nid = n["id"]
         node_x.append(positions[nid]["x"])
@@ -109,23 +111,17 @@ def _build_graph(dep_data, title, highlight_node=None):
         node_ids.append(nid)
         if focus_set is None:
             node_colors.append(PALETTE["navy"] if n["group"] == "source" else PALETTE["navy_light"])
-            node_opacity.append(1.0)
             node_sizes.append(14 if n["group"] == "source" else 10)
-        elif nid in focus_set:
-            node_colors.append(PALETTE["amber"] if nid == highlight_node else PALETTE["navy_light"])
-            node_opacity.append(1.0)
-            node_sizes.append(18 if nid == highlight_node else 12)
         else:
-            node_colors.append(PALETTE["gray"])
-            node_opacity.append(0.25)
-            node_sizes.append(8)
+            node_colors.append(PALETTE["amber"] if nid == highlight_node else PALETTE["navy_light"])
+            node_sizes.append(20 if nid == highlight_node else 12)
 
     node_trace = go.Scatter(
         x=node_x, y=node_y, mode="markers+text",
         text=node_labels, textposition="middle center",
-        textfont=dict(size=8, color=PALETTE["navy"]),
+        textfont=dict(size=9 if focus_set else 8, color=PALETTE["navy"]),
         marker=dict(
-            color=node_colors, size=node_sizes, opacity=node_opacity,
+            color=node_colors, size=node_sizes, opacity=1.0,
             line=dict(color=PALETTE["white"], width=1.5),
         ),
         customdata=node_ids, hoverinfo="text",
@@ -133,7 +129,7 @@ def _build_graph(dep_data, title, highlight_node=None):
         showlegend=False,
     )
 
-    subtitle = f" — {get_label(highlight_node)}" if highlight_node else ""
+    subtitle = f" — focus: {get_label(highlight_node)}" if highlight_node else ""
     fig = go.Figure(data=[edge_trace, node_trace])
     fig.update_layout(
         **plotly_layout(height=420, margin=dict(l=10, r=10, t=40, b=10)),

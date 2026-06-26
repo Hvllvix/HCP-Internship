@@ -75,6 +75,53 @@ def load_rgph():
     return pd.read_parquet(ROOT / "Data/Processed/CleanRGPH.parquet")
 
 
+def _read_sav(path):
+    import pyreadstat
+    df, _ = pyreadstat.read_sav(path)
+    return df
+
+
+def load_raw_encdm():
+    path = ROOT / "Data/Raw/ENCDM.sav"
+    if not path.exists():
+        return None
+    return _read_sav(path)
+
+
+def load_raw_rgph():
+    path = ROOT / "Data/Raw/RGPH.sav"
+    if not path.exists():
+        return None
+    return _read_sav(path)
+
+
+def household_weights(df):
+    """Inverse-scaled coef_ménage — required because clean parquet stores scaled weights."""
+    if "coef_ménage" not in df.columns:
+        return pd.Series(1.0, index=df.index)
+    w = inverse_scale_encdm(df[["coef_ménage"]])["coef_ménage"]
+    return w.clip(lower=0)
+
+
+def weighted_poverty_rate(df, weight_series=None):
+    w = weight_series if weight_series is not None else household_weights(df)
+    total = w.sum()
+    if total <= 0:
+        return 0.0
+    return float((df["Pauvre"] * w).sum() / total * 100)
+
+
+def build_geo_id_map(geojson, geojson_regions):
+    """cartodb_id -> ENCDM region code."""
+    id_map = {}
+    for feat in geojson["features"]:
+        props = feat["properties"]
+        code = geojson_regions.get(props.get("region", ""))
+        if code is not None:
+            id_map[props["cartodb_id"]] = code
+    return id_map
+
+
 def load_geojson():
     with open(ROOT / "Assets/Maps/Morocco-Regions.geojson", encoding="utf-8") as f:
         return json.load(f)
@@ -174,12 +221,17 @@ def build_region_bridge():
     map_rgph = load_mapping_rgph()["REG"]
     inv_rgph = {name: code for name, code in map_rgph.items()}
     bridge = {}
-    for enc_code, enc_name in map_encdm.items():
+
+    def _norm(s):
+        return str(s).lower().replace("é", "e").replace("è", "e").replace("â", "a").replace("ï", "i")
+
+    for enc_name, enc_code in map_encdm.items():
+        enc_code = int(enc_code)
         if enc_name in inv_rgph:
-            bridge[enc_code] = inv_rgph[enc_name]
-        else:
-            for rgph_name, rgph_code in inv_rgph.items():
-                if enc_name.replace("é", "e").replace("â", "a") in rgph_name.replace("é", "e").replace("â", "a"):
-                    bridge[enc_code] = rgph_code
-                    break
+            bridge[enc_code] = int(inv_rgph[enc_name])
+            continue
+        for rgph_name, rgph_code in inv_rgph.items():
+            if _norm(enc_name) in _norm(rgph_name) or _norm(rgph_name) in _norm(enc_name):
+                bridge[enc_code] = int(rgph_code)
+                break
     return bridge

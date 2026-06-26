@@ -49,14 +49,102 @@ CSS = f"""
     section[data-testid="stSidebar"] {{
         background: linear-gradient(180deg, var(--navy) 0%, #0f1a2e 100%) !important;
         border-right: 1px solid rgba(255,255,255,0.08);
+        min-width: 22rem !important;
+        width: 22rem !important;
     }}
-    section[data-testid="stSidebar"] .stMarkdown,
+    [data-testid="stSidebar"][aria-expanded="true"] ~ div .main .block-container {{
+        margin-left: 0;
+    }}
+    section[data-testid="stSidebar"] > div {{
+        width: 22rem !important;
+        min-width: 22rem !important;
+    }}
+    section[data-testid="stSidebar"] .stMarkdown p,
+    section[data-testid="stSidebar"] .stMarkdown li,
+    section[data-testid="stSidebar"] .stMarkdown span,
     section[data-testid="stSidebar"] label,
-    section[data-testid="stSidebar"] .stCaption {{
-        color: rgba(255,255,255,0.88) !important;
+    section[data-testid="stSidebar"] .stCaption,
+    section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {{
+        color: rgba(255,255,255,0.92) !important;
+    }}
+    section[data-testid="stSidebar"] .stRadio label,
+    section[data-testid="stSidebar"] .stRadio label span,
+    section[data-testid="stSidebar"] .stRadio label p,
+    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label {{
+        color: #ffffff !important;
+        font-size: 1.08rem !important;
+        font-weight: 600 !important;
+    }}
+    section[data-testid="stSidebar"] .sidebar-nav-title {{
+        color: #ffffff !important;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        margin: 0.5rem 0 0.35rem 0;
+    }}
+    section[data-testid="stSidebar"] .sidebar-desc {{
+        color: rgba(255,255,255,0.78) !important;
+        font-size: 0.82rem;
+        line-height: 1.5;
+        margin-bottom: 0.75rem;
     }}
     section[data-testid="stSidebar"] hr {{
         border-color: rgba(255,255,255,0.12) !important;
+    }}
+
+    div[data-testid="stVerticalBlockBorderWrapper"] > div[data-testid="stVerticalBlockBorderDiv"] {{
+        background-color: {PALETTE['white']};
+        padding: 1.25rem 1.35rem;
+        border-radius: 14px;
+        border: 1px solid {PALETTE['gray']};
+        box-shadow: 0 8px 24px rgba(20, 33, 61, 0.06);
+    }}
+
+    .plot-desc {{
+        font-size: 0.88rem;
+        line-height: 1.55;
+        color: var(--text-dim);
+        margin: 0 0 0.75rem 0;
+    }}
+    .prose-block {{
+        font-size: 0.92rem;
+        line-height: 1.65;
+        color: var(--text-main);
+        margin: 0 0 1rem 0;
+    }}
+    .prose-block strong {{ color: var(--navy); }}
+    .repo-tree {{
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.78rem;
+        line-height: 1.55;
+        background: #f0f2f6;
+        border: 1px solid var(--gray);
+        border-radius: 10px;
+        padding: 1rem 1.15rem;
+        white-space: pre;
+        overflow-x: auto;
+        color: var(--navy);
+    }}
+    div[data-testid="column"] > div[data-testid="stVerticalBlockBorderWrapper"] {{
+        height: 100%;
+    }}
+    div[data-testid="column"] > div[data-testid="stVerticalBlockBorderWrapper"] > div[data-testid="stVerticalBlockBorderDiv"] {{
+        min-height: 420px;
+        display: flex;
+        flex-direction: column;
+    }}
+    .sidebar-tagline {{
+        color: rgba(255,255,255,0.72) !important;
+        font-size: 0.8rem;
+        line-height: 1.5;
+        margin: 0.25rem 0 1rem 0;
+    }}
+    .section-heading {{
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--navy);
+        margin: 0 0 0.35rem 0;
     }}
 
     .main-title {{

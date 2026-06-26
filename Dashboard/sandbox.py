@@ -4,7 +4,7 @@ Dual-engine inference: LightGBM + Hypernetwork.
 import numpy as np
 import pandas as pd
 
-from data_loader import ENCDM_CONFIG, load_all_lgbm
+from data_loader import ENCDM_CONFIG, load_all_lgbm, load_scalers_encdm
 from hypernet import get_hypernet_engine
 
 
@@ -25,18 +25,33 @@ def build_feature_row(form_inputs, code_maps):
     return row
 
 
+def scale_feature_row(row, scalers):
+    """Apply persisted StandardScalers to numerical ENCDM fields."""
+    scaled = dict(row)
+    df = pd.DataFrame([row])
+    for col, scaler in scalers.items():
+        if col not in df.columns:
+            continue
+        try:
+            scaled[col] = float(scaler.transform(df[[col]]).ravel()[0])
+        except Exception:
+            scaled[col] = float(row[col])
+    return scaled
+
+
 def row_to_model_frame(row, features):
     return pd.DataFrame(
         [[row[f] for f in features]], columns=features, dtype="float32"
     )
 
 
-def run_lgbm_inference(feature_row, bundles):
+def run_lgbm_inference(feature_row, bundles, scalers):
+    scaled_row = scale_feature_row(feature_row, scalers)
     results = {}
     for target, bundle in bundles.items():
         model = bundle["model"]
         feats = bundle["features"]
-        X = row_to_model_frame(feature_row, feats)
+        X = row_to_model_frame(scaled_row, feats)
         proba = model.predict_proba(X)[0, 1]
         threshold = bundle.get("threshold", 0.5)
         results[target] = {
@@ -91,8 +106,9 @@ def feature_contributions(bundles, feature_row):
 def run_dual_prediction(form_inputs, code_maps, rgph_df, rural_transfer=False):
     row = build_feature_row(form_inputs, code_maps)
     bundles = load_all_lgbm()
+    scalers = load_scalers_encdm()
 
-    lgbm = run_lgbm_inference(row, bundles)
+    lgbm = run_lgbm_inference(row, bundles, scalers)
     region_code = row.get("Région_12", 2)
     milieu_code = row.get("Milieu", 0)
     hyper = run_hypernet_inference(
@@ -102,6 +118,7 @@ def run_dual_prediction(form_inputs, code_maps, rgph_df, rural_transfer=False):
 
     return {
         "feature_row": row,
+        "scaled_row": scale_feature_row(row, scalers),
         "lgbm": lgbm,
         "hypernet": hyper,
         "contributions": contributions,
