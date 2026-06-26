@@ -1,8 +1,3 @@
-**HCP Morocco Poverty & Vulnerability Intelligence Dashboard (ENCDM × RGPH)**
-
-**Repository:** [github.com/Hvllvix/HCP-Internship](https://github.com/Hvllvix/HCP-Internship)
-
----
 ## Executive Summary
 
 Morocco’s poverty and vulnerability dynamics are **spatially heterogeneous** and structurally linked to household demographics, labor-market position, and living-conditions infrastructure. Public policy design therefore benefits from analytical systems that can (i) *characterize* socioeconomic stratification and (ii) *simulate* how household-level covariates map to poverty and vulnerability risk.
