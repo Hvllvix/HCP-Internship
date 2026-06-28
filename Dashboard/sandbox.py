@@ -1,15 +1,15 @@
-"""
-Dual-engine inference: LightGBM + Hypernetwork.
-"""
-import numpy as np
+"""Dual-engine inference: LightGBM + Hypernetwork."""
 import pandas as pd
 
-from data_loader import ENCDM_CONFIG, load_all_lgbm, load_scalers_encdm
-from hypernet import get_hypernet_engine
+from data_loader import ENCDM_CONFIG, load_all_lgbm, load_encdm, load_scalers_encdm
+from hypernet import HypernetInferenceError, get_hypernet_engine
+
+
+class InferenceError(Exception):
+    """Base inference failure."""
 
 
 def build_feature_row(form_inputs, code_maps):
-    """Map UI labels to numeric feature dict."""
     row = {}
     for col in ENCDM_CONFIG["categorical"]:
         label = form_inputs.get(col)
@@ -26,7 +26,6 @@ def build_feature_row(form_inputs, code_maps):
 
 
 def scale_feature_row(row, scalers):
-    """Apply persisted StandardScalers to numerical ENCDM fields."""
     scaled = dict(row)
     df = pd.DataFrame([row])
     for col, scaler in scalers.items():
@@ -64,6 +63,11 @@ def run_lgbm_inference(feature_row, bundles, scalers):
 
 def run_hypernet_inference(feature_row, region_code, milieu_code, rgph_df, rural_transfer=False):
     engine = get_hypernet_engine(rgph_df)
+    if not engine._ready:
+        return {
+            t: {"probability": None, "label": None, "threshold": None}
+            for t in ENCDM_CONFIG["target"]
+        }
     probs = engine.predict(feature_row, region_code, milieu_code, rural_transfer)
     results = {}
     for target in ENCDM_CONFIG["target"]:
@@ -81,7 +85,6 @@ def run_hypernet_inference(feature_row, region_code, milieu_code, rgph_df, rural
 
 
 def feature_contributions(bundles, feature_row):
-    """SHAP-inspired bars from LightGBM feature importances."""
     target = "Pauvre"
     bundle = bundles.get(target)
     if bundle is None:
@@ -103,6 +106,27 @@ def feature_contributions(bundles, feature_row):
     return contributions
 
 
+def ood_flags(feature_row, encdm_df=None):
+    if encdm_df is None:
+        encdm_df = load_encdm()
+    flags = []
+    if "Age_CM" in encdm_df.columns:
+        ages = encdm_df["Age_CM"]
+        q05, q95 = ages.quantile(0.05), ages.quantile(0.95)
+        age = feature_row.get("Age_CM")
+        if age is not None and (age < q05 or age > q95):
+            flags.append(f"Age ({age:.0f}) is outside the central training range ({q05:.0f}-{q95:.0f}).")
+    if "Taille_ménage" in encdm_df.columns:
+        sizes = encdm_df["Taille_ménage"]
+        q05, q95 = sizes.quantile(0.05), sizes.quantile(0.95)
+        size = feature_row.get("Taille_ménage")
+        if size is not None and (size < q05 or size > q95):
+            flags.append(
+                f"Household size ({size:.0f}) is outside the central training range ({q05:.0f}-{q95:.0f})."
+            )
+    return flags
+
+
 def run_dual_prediction(form_inputs, code_maps, rgph_df, rural_transfer=False):
     row = build_feature_row(form_inputs, code_maps)
     bundles = load_all_lgbm()
@@ -111,15 +135,19 @@ def run_dual_prediction(form_inputs, code_maps, rgph_df, rural_transfer=False):
     lgbm = run_lgbm_inference(row, bundles, scalers)
     region_code = row.get("Région_12", 2)
     milieu_code = row.get("Milieu", 0)
-    hyper = run_hypernet_inference(
-        row, region_code, milieu_code, rgph_df, rural_transfer=rural_transfer
-    )
-    contributions = feature_contributions(bundles, row)
+    try:
+        hyper = run_hypernet_inference(
+            row, region_code, milieu_code, rgph_df, rural_transfer=rural_transfer
+        )
+    except HypernetInferenceError as exc:
+        raise InferenceError(str(exc)) from exc
 
+    encdm_df = load_encdm()
     return {
         "feature_row": row,
         "scaled_row": scale_feature_row(row, scalers),
         "lgbm": lgbm,
         "hypernet": hyper,
-        "contributions": contributions,
+        "contributions": feature_contributions(bundles, row),
+        "ood_flags": ood_flags(row, encdm_df),
     }

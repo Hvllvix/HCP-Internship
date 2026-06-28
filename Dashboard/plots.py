@@ -1,10 +1,9 @@
-"""
-Plot helpers for dashboard sections.
-"""
+"""Plot helpers for dashboard sections."""
 import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from sklearn.metrics import roc_auc_score, roc_curve
 
 from data_loader import ENCDM_CONFIG, get_label, household_weights, inverse_scale_encdm, weighted_poverty_rate
@@ -12,10 +11,59 @@ from theme import PALETTE, plotly_layout
 
 CHART_H = 300
 CHART_H_TALL = 380
+LOG_EPS = 1e-4
 
 
 def _layout(height=None, **kwargs):
     return plotly_layout(height=height or CHART_H, **kwargs)
+
+
+def _log_prob(p):
+    return float(np.log10(max(p, LOG_EPS)))
+
+
+def fig_dataset_dims(raw_encdm, raw_rgph, clean_encdm=None, clean_rgph=None):
+    rows = []
+    for name, df in [("ENCDM Raw", raw_encdm), ("RGPH Raw", raw_rgph)]:
+        if df is not None and len(df):
+            rows.append({"Dataset": name, "Metric": "Rows", "Value": len(df)})
+            rows.append({"Dataset": name, "Metric": "Columns", "Value": len(df.columns)})
+    if clean_encdm is not None:
+        rows.append({"Dataset": "ENCDM Clean", "Metric": "Rows", "Value": len(clean_encdm)})
+        rows.append({"Dataset": "ENCDM Clean", "Metric": "Columns", "Value": len(clean_encdm.columns)})
+    if clean_rgph is not None:
+        rows.append({"Dataset": "RGPH Clean", "Metric": "Rows", "Value": len(clean_rgph)})
+        rows.append({"Dataset": "RGPH Clean", "Metric": "Columns", "Value": len(clean_rgph.columns)})
+    if not rows:
+        return None
+    df = pd.DataFrame(rows)
+    fig = px.bar(
+        df, x="Dataset", y="Value", color="Metric", barmode="group",
+        color_discrete_map={"Rows": PALETTE["navy"], "Columns": PALETTE["amber"]},
+        text_auto=",",
+    )
+    fig.update_layout(**_layout(CHART_H, legend=dict(orientation="h", y=1.12)))
+    fig.update_traces(textposition="outside")
+    return fig
+
+
+def fig_null_counts(raw_encdm, raw_rgph):
+    rows = []
+    for name, df in [("ENCDM", raw_encdm), ("RGPH", raw_rgph)]:
+        if df is None or len(df) == 0:
+            continue
+        nulls = int(df.isna().sum().sum())
+        cells = int(df.size)
+        rows.append({"Dataset": name, "Null Cells": nulls, "Filled Cells": cells - nulls})
+    if not rows:
+        return None
+    df = pd.DataFrame(rows)
+    fig = px.bar(
+        df, x="Dataset", y=["Null Cells", "Filled Cells"], barmode="stack",
+        color_discrete_map={"Null Cells": PALETTE["amber"], "Filled Cells": PALETTE["navy"]},
+    )
+    fig.update_layout(**_layout(CHART_H, legend=dict(orientation="h", y=1.12)))
+    return fig
 
 
 def fig_missing_values(encdm, top_n=10):
@@ -29,10 +77,52 @@ def fig_missing_values(encdm, top_n=10):
     }).head(top_n)
     fig = px.bar(
         md, x="Feature", y="Missing %", color="Missing %",
-        color_continuous_scale=[PALETTE["gray"], PALETTE["amber"], PALETTE["navy"]],
+        color_continuous_scale=[PALETTE["zinc400"], PALETTE["amber"], PALETTE["navy"]],
     )
     fig.update_layout(**_layout())
     fig.update_xaxes(tickangle=-35)
+    return fig
+
+
+def fig_raw_missing_values(raw_encdm, raw_rgph, top_n=12):
+    fig = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=("ENCDM Raw", "RGPH Raw"),
+        horizontal_spacing=0.12,
+    )
+    has_trace = False
+    for col_idx, df in enumerate([raw_encdm, raw_rgph], 1):
+        if df is None or len(df) == 0:
+            continue
+        miss_pct = (df.isna().sum() / len(df) * 100)
+        miss_pct = miss_pct[miss_pct > 0].sort_values(ascending=False).head(top_n)
+        if len(miss_pct) == 0:
+            continue
+        has_trace = True
+        colors = [
+            PALETTE["danger"] if v > 5 else PALETTE["amber"] if v > 1 else PALETTE["navy"]
+            for v in miss_pct.values
+        ]
+        fig.add_trace(
+            go.Bar(
+                x=miss_pct.values,
+                y=[get_label(c) if get_label(c) != c else str(c)[:28] for c in miss_pct.index],
+                orientation="h",
+                marker_color=colors,
+                text=[f"{v:.1f}%" for v in miss_pct.values],
+                textposition="outside",
+                showlegend=False,
+            ),
+            row=1, col=col_idx,
+        )
+        fig.update_xaxes(
+            title_text="Missing %",
+            range=[0, min(105, miss_pct.max() * 1.15 + 5)],
+            row=1, col=col_idx,
+        )
+    if not has_trace:
+        return None
+    fig.update_layout(**_layout(CHART_H_TALL, title="Raw Dataset Missingness (Pre-Imputation)"))
     return fig
 
 
@@ -79,8 +169,11 @@ def fig_rgph_infrastructure(rgph):
     if not rows:
         return None
     df = pd.DataFrame(rows)
-    fig = px.bar(df, x="Asset", y="Access (%)", color="Access (%)",
-                 color_continuous_scale=[PALETTE["gray"], PALETTE["navy"]], text_auto=".1f", range_color=[0, 100])
+    fig = px.bar(
+        df, x="Asset", y="Access (%)", color="Access (%)",
+        color_continuous_scale=[PALETTE["zinc400"], PALETTE["navy"]],
+        text_auto=".1f", range_color=[0, 100],
+    )
     fig.update_layout(**_layout(coloraxis_showscale=False))
     return fig
 
@@ -91,40 +184,6 @@ def fig_region_household_size(encdm, region_code):
         return None
     fig = px.histogram(sub, x="Taille_ménage", nbins=12, color_discrete_sequence=[PALETTE["amber"]])
     fig.update_layout(**_layout(xaxis_title="Household size", yaxis_title="Count"))
-    return fig
-
-
-def fig_raw_missing_values(raw_encdm, raw_rgph, top_n=12):
-    """Missingness in raw .sav files before Simpute / cleaning."""
-    from plotly.subplots import make_subplots
-
-    fig = make_subplots(
-        rows=1, cols=2,
-        subplot_titles=("ENCDM Raw", "RGPH Raw"),
-        horizontal_spacing=0.12,
-    )
-    for col_idx, (df, name) in enumerate([(raw_encdm, "ENCDM"), (raw_rgph, "RGPH")], 1):
-        if df is None or len(df) == 0:
-            continue
-        miss_pct = (df.isna().sum() / len(df) * 100).sort_values(ascending=False).head(top_n)
-        colors = [
-            PALETTE["danger"] if v > 5 else PALETTE["amber"] if v > 1 else PALETTE["navy"]
-            for v in miss_pct.values
-        ]
-        fig.add_trace(
-            go.Bar(
-                x=miss_pct.values,
-                y=[get_label(c) if get_label(c) != c else str(c)[:28] for c in miss_pct.index],
-                orientation="h",
-                marker_color=colors,
-                text=[f"{v:.1f}%" for v in miss_pct.values],
-                textposition="outside",
-                showlegend=False,
-            ),
-            row=1, col=col_idx,
-        )
-        fig.update_xaxes(title_text="Missing %", range=[0, min(105, miss_pct.max() * 1.15 + 5)], row=1, col=col_idx)
-    fig.update_layout(**_layout(CHART_H_TALL, title="Raw Dataset Missingness (Pre-Imputation)"))
     return fig
 
 
@@ -179,6 +238,7 @@ def fig_choropleth(geojson, region_stats, geojson_regions, selected_code=None):
             z_data.append(None)
             hover.append(gname)
 
+    bg = PALETTE["bg"]
     fig = go.Figure()
     fig.add_trace(go.Choropleth(
         geojson=geojson,
@@ -196,7 +256,7 @@ def fig_choropleth(geojson, region_stats, geojson_regions, selected_code=None):
             [1, PALETTE["navy"]],
         ],
         zmin=5, zmax=45,
-        marker=dict(line=dict(width=1.2, color=PALETTE["navy"])),
+        marker=dict(line=dict(width=1.2, color=PALETTE["zinc700"])),
         colorbar=dict(title="Poverty %", thickness=12, len=0.55),
         name="regions",
     ))
@@ -216,17 +276,23 @@ def fig_choropleth(geojson, region_stats, geojson_regions, selected_code=None):
         **plotly_layout(
             height=480,
             margin=dict(l=0, r=0, t=30, b=0),
-            title="Click a region or use the selector below",
+            title="Click a region to filter panels below",
+            paper_bgcolor=bg,
+            plot_bgcolor=bg,
         ),
         geo=dict(
+            scope="africa",
             projection_type="mercator",
-            showland=True,
-            landcolor=PALETTE["gray"],
-            coastlinecolor=PALETTE["white"],
+            showland=False,
+            showocean=False,
             showcountries=False,
+            showcoastlines=False,
+            showlakes=False,
+            showrivers=False,
             showframe=False,
-            lonaxis_range=[-17, -1],
-            lataxis_range=[21, 36],
+            bgcolor=bg,
+            lonaxis=dict(range=[-17.2, -0.8]),
+            lataxis=dict(range=[21.0, 36.2]),
         ),
         clickmode="event+select",
     )
@@ -243,7 +309,7 @@ def fig_feature_importance(bundles, target="Pauvre"):
     fig = px.bar(
         imps, x=imps.values, y=imps.index, orientation="h",
         color=imps.values,
-        color_continuous_scale=[PALETTE["gray"], PALETTE["amber"], PALETTE["navy"]],
+        color_continuous_scale=[PALETTE["zinc400"], PALETTE["amber"], PALETTE["navy"]],
         labels={"x": "Importance", "y": ""},
     )
     fig.update_layout(**plotly_layout(height=320, showlegend=False, coloraxis_showscale=False))
@@ -251,16 +317,14 @@ def fig_feature_importance(bundles, target="Pauvre"):
 
 
 def fig_roc_curves(encdm, bundles, sample_n=2000):
-    """Weighted ROC from a sample — real model evaluation."""
     rng = np.random.default_rng(42)
     idx = rng.choice(len(encdm), size=min(sample_n, len(encdm)), replace=False)
     sample = encdm.iloc[idx]
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=[0, 1], y=[0, 1], mode="lines", name="Random",
-        line=dict(color=PALETTE["gray"], dash="dash"),
+        line=dict(color=PALETTE["zinc400"], dash="dash"),
     ))
-
     for target in ENCDM_CONFIG["target"]:
         bundle = bundles.get(target)
         if bundle is None:
@@ -281,7 +345,6 @@ def fig_roc_curves(encdm, bundles, sample_n=2000):
             name=f"LGBM {target} (AUC {auc:.3f})",
             line=dict(width=2.5, color=PALETTE["navy"] if target == "Pauvre" else PALETTE["amber"]),
         ))
-
     fig.update_layout(**plotly_layout(
         height=300,
         xaxis_title="False Positive Rate",
@@ -298,7 +361,7 @@ def fig_contribution_waterfall(contributions):
     fig = px.bar(
         df, x="importance", y="feature", orientation="h",
         color="importance",
-        color_continuous_scale=[PALETTE["gray"], PALETTE["amber"]],
+        color_continuous_scale=[PALETTE["zinc400"], PALETTE["amber"]],
         text_auto=".1f",
     )
     fig.update_layout(**plotly_layout(height=280, showlegend=False, coloraxis_showscale=False))
@@ -306,22 +369,35 @@ def fig_contribution_waterfall(contributions):
     return fig
 
 
-def fig_dual_comparison(lgbm, hyper):
+def fig_dual_comparison(lgbm, hyper, log_scale=True):
     rows = []
     for engine, res in [("LightGBM", lgbm), ("Hypernet", hyper)]:
         for target in ENCDM_CONFIG["target"]:
             p = res[target]["probability"]
             if p is not None:
-                rows.append({"Model": engine, "Target": target, "Probability": p})
+                val = _log_prob(p) if log_scale else p
+                rows.append({
+                    "Model": engine,
+                    "Target": target,
+                    "Value": val,
+                    "Raw": p,
+                })
     if not rows:
         return None
     df = pd.DataFrame(rows)
     colors = {"Pauvre": PALETTE["navy"], "Vulnérable": PALETTE["amber"]}
+    ylabel = "log10(probability)" if log_scale else "Probability"
     fig = px.bar(
-        df, x="Model", y="Probability", color="Target", barmode="group",
-        color_discrete_map=colors, text_auto=".0%",
+        df, x="Model", y="Value", color="Target", barmode="group",
+        color_discrete_map=colors,
+        text=[f"{r['Raw']:.2%}" for r in rows],
     )
-    fig.update_layout(**plotly_layout(height=280, yaxis=dict(range=[0, 1]), legend=dict(orientation="h", y=1.12)))
+    fig.update_layout(**plotly_layout(
+        height=300,
+        yaxis_title=ylabel,
+        legend=dict(orientation="h", y=1.12),
+    ))
+    fig.update_traces(textposition="outside")
     return fig
 
 
@@ -333,24 +409,26 @@ def fig_region_education(encdm, region_code, label_maps):
     sub["edu_label"] = translate_series(sub["Niveau_scolaire_agreg_CM"], "Niveau_scolaire_agreg_CM", label_maps)
     grouped = sub.assign(_w=w).groupby("edu_label")["_w"].sum().reset_index()
     grouped.columns = ["Education", "Weighted Households"]
-    fig = px.bar(
-        grouped, x="Education", y="Weighted Households",
-        color_discrete_sequence=[PALETTE["navy"]],
-    )
+    fig = px.bar(grouped, x="Education", y="Weighted Households", color_discrete_sequence=[PALETTE["navy"]])
     fig.update_layout(**plotly_layout(height=280, showlegend=False))
     fig.update_xaxes(tickangle=-25)
     return fig
 
 
 def fig_region_gender(encdm, region_code):
+    """Sexe_CM: 0=Masculin, 1=Féminin per MapENCDM.json."""
     sub = encdm[encdm["Région_12"] == region_code]
     if len(sub) == 0:
         return None
     w = household_weights(sub)
+    total = w.sum()
+    if total <= 0:
+        return None
     rows = []
-    for sexe, label in [(1, "Male"), (2, "Female")]:
-        mask = sub["Sexe_CM"] == sexe
-        rows.append({"Gender": label, "Weighted Share (%)": round(w[mask].sum() / w.sum() * 100, 1)})
+    for code, label in [(0, "Male"), (1, "Female")]:
+        mask = sub["Sexe_CM"] == code
+        share = round(w[mask].sum() / total * 100, 1)
+        rows.append({"Gender": label, "Weighted Share (%)": share})
     df = pd.DataFrame(rows)
     fig = px.bar(
         df, x="Gender", y="Weighted Share (%)", color="Gender",
@@ -372,7 +450,7 @@ def fig_region_amenities(rgph, region_code):
     })
     fig = px.bar(
         df, x="Amenity", y="Access (%)", color="Access (%)",
-        color_continuous_scale=[PALETTE["gray"], PALETTE["navy"]],
+        color_continuous_scale=[PALETTE["zinc400"], PALETTE["navy"]],
         text_auto=".1f", range_color=[0, 100],
     )
     fig.update_layout(**plotly_layout(height=280, coloraxis_showscale=False))
@@ -420,7 +498,7 @@ def fig_rgph_housing_index(rgph, region_code):
     df = pd.DataFrame({"Amenity": list(indicators.keys()), "Access (%)": list(indicators.values())})
     fig = px.bar(
         df, x="Amenity", y="Access (%)", color="Access (%)",
-        color_continuous_scale=[PALETTE["gray"], PALETTE["navy"]],
+        color_continuous_scale=[PALETTE["zinc400"], PALETTE["navy"]],
         text_auto=".1f", range_color=[0, 100],
     )
     fig.update_layout(**plotly_layout(height=260, coloraxis_showscale=False))
@@ -449,6 +527,7 @@ def fig_hypernet_loss():
         height=280,
         xaxis_title="Epoch",
         yaxis_title="Loss",
+        yaxis_type="log",
         legend=dict(orientation="h", y=1.12),
     ))
     return fig

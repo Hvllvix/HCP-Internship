@@ -1,0 +1,66 @@
+%%{init: {'theme': 'base', 'themeVariables': {'fontFamily': 'arial', 'fontSize': '12px', 'primaryColor': '#14213d', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#000000', 'lineColor': '#fca311', 'secondaryColor': '#e5e5e5', 'tertiaryColor': '#ffffff'}, 'flowchart': {'htmlLabels': true, 'curve': 'basis'}}}%%
+
+flowchart LR
+  subgraph RAW["Raw Data Ingestion"]
+    direction LR
+    ENCDM["ENCDM.sav<br/>~16k households"]
+    RGPH["RGPH.sav<br/>~730k households"]
+  end
+
+  subgraph PROF["Dimensional Profiling"]
+    DP["Rows / Cols / Nulls<br/>Log-scaled comparison"]
+  end
+
+  ENCDM --> DP
+  RGPH --> DP
+
+  subgraph E_PIPE["ENCDM Pipeline"]
+    direction TB
+    E1["Schema Inspection"]
+    E2["Missingness Analysis"]
+    E3["Categorical Encoding<br/>+ Type Registry"]
+    E4["Standardization<br/>Z-score scaling"]
+    E5["KNN Imputation<br/>Distance-weighted"]
+    E6["Parquet Export"]
+    
+    E1 --> E2 --> E3 --> E4 --> E5 --> E6
+  end
+
+  subgraph R_PIPE["RGPH Pipeline"]
+    direction TB
+    R1["Schema Inspection"]
+    R2["Stratified Missingness"]
+    R3["Categorical Encoding<br/>+ Type Registry"]
+    R4["LightGBM Imputation<br/>Classifier / Regressor"]
+    R5["Standardization<br/>Z-score scaling"]
+    R6["Residual Fill<br/>+ Parquet Export"]
+    
+    R1 --> R2 --> R3 --> R4 --> R5 --> R6
+  end
+
+  DP --> E_PIPE
+  DP --> R_PIPE
+
+  subgraph OUT["Persisted Artifacts"]
+    direction LR
+    LABELS["Label Maps<br/>(JSON)"]
+    SCALERS["Scalers<br/>(Joblib)"]
+    IMP["Imputers<br/>(Joblib)"]
+    PARQUET["Clean Parquet<br/>Datasets"]
+  end
+
+  E6 --> PARQUET
+  R6 --> PARQUET
+  E3 --> LABELS
+  R3 --> LABELS
+  E4 --> SCALERS
+  R5 --> SCALERS
+  E5 --> IMP
+  R4 --> IMP
+
+  classDef raw fill:#14213d,stroke:#000000,color:#ffffff
+  classDef prof fill:#000000,stroke:#000000,color:#ffffff
+  classDef step fill:#e5e5e5,stroke:#000000,color:#000000
+  classDef enc fill:#fca311,stroke:#000000,color:#000000
+  classDef imp fill:#ffffff,stroke:#000000,color:#000000
+  classDef out fill:#000000,stroke:#000000,color:#ffffff

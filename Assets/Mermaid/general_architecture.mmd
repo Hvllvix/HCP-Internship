@@ -1,0 +1,70 @@
+%%{init: {'theme': 'base', 'themeVariables': {'fontFamily': 'arial', 'fontSize': '12px', 'primaryColor': '#14213d', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#000000', 'lineColor': '#fca311', 'secondaryColor': '#e5e5e5', 'tertiaryColor': '#ffffff'}, 'flowchart': {'htmlLabels': true, 'curve': 'basis'}}}%%
+
+flowchart LR
+  subgraph SOURCES["HCP Data Sources"]
+    ENCDM_SRC["ENCDM Survey<br/>2019-2020<br/>Household expenditure<br/>.sav format"]
+    RGPH_SRC["RGPH Census<br/>2014<br/>Population & Housing<br/>.sav format"]
+  end
+
+  subgraph P1["Phase 1: Pre-processing"]
+    direction TB
+    S1["SPSS Ingestion"]
+    S2["Dimensional Audit"]
+    S3["Categorical Encoding<br/>+ Label Maps"]
+    S4["Feature Scaling"]
+    S5["Missing Value Imputation<br/>KNN (ENCDM) / LightGBM (RGPH)"]
+    S6["Parquet Export"]
+    
+    S1 --> S2 --> S3 --> S4 --> S5 --> S6
+  end
+
+  subgraph P2["Phase 2: Exploratory Analysis"]
+    direction TB
+    A1["Inverse Scaling<br/>Original magnitudes"]
+    A2["Regional Poverty Profile<br/>12 regions x 3 statuses"]
+    A3["Demographic & Human Capital<br/>Education / Gender / Age / Labor"]
+    A4["Spatial Deprivation<br/>Connectivity / Housing / Utilities"]
+    A5["Urban-Rural Contrasts<br/>Poverty rates / Access gaps"]
+    
+    A1 --> A2
+    A1 --> A3
+    A1 --> A4
+    A1 --> A5
+  end
+
+  subgraph P3["Phase 3: Predictive Modeling"]
+    direction TB
+    M1["LightGBM Baseline<br/>Weighted classifiers<br/>F1-optimized thresholds"]
+    M2["Transfer Learning<br/>Shared features model<br/>Isotonic calibration<br/>→ Census projection"]
+    M3["Hypernetwork (PyTorch)<br/>RGPH context → weight generator<br/>→ Poverty prediction<br/>Paired stratum training"]
+    
+    M1 --> M2 --> M3
+  end
+
+  subgraph ARTIFACTS["Serialized Models"]
+    LGBM["LightGBM Classifiers"]
+    TRANSFER["Transfer Models"]
+    HYPER["Hypernet Checkpoint"]
+  end
+
+  subgraph DASH["Streamlit Dashboard"]
+    D1["Data Explorer"]
+    D2["Regional Analysis"]
+    D3["Predictive Sandbox"]
+  end
+
+  ENCDM_SRC --> P1
+  RGPH_SRC --> P1
+  P1 --> P2
+  P1 --> P3
+  P3 --> ARTIFACTS
+  P2 --> DASH
+  ARTIFACTS --> DASH
+
+  classDef source fill:#14213d,stroke:#000000,color:#ffffff
+  classDef phase fill:#e5e5e5,stroke:#000000,color:#000000
+  classDef step fill:#e5e5e5,stroke:#000000,color:#000000
+  classDef enc fill:#fca311,stroke:#000000,color:#000000
+  classDef model fill:#000000,stroke:#000000,color:#ffffff
+  classDef artifact fill:#fca311,stroke:#000000,color:#000000
+  classDef dash fill:#ffffff,stroke:#000000,color:#000000

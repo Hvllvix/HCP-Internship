@@ -10,6 +10,18 @@ import torch.nn.functional as F
 from data_loader import ENCDM_CONFIG, RGPH_CONFIG, ROOT
 
 
+class HypernetInferenceError(Exception):
+    """Raised when hypernetwork inference cannot complete."""
+
+
+class HypernetEngineError(HypernetInferenceError):
+    """Checkpoint or engine initialization failure."""
+
+
+class HypernetStrataError(HypernetInferenceError):
+    """Unsupported region-milieu stratum for trained weights."""
+
+
 class MultiEmbedding(nn.Module):
     def __init__(self, embspecs):
         super().__init__()
@@ -76,7 +88,7 @@ class HypernetEngine:
     def load(self, rgph_df):
         ckpt_path = ROOT / "Models/Classifier/Hypernet.pt"
         if not ckpt_path.exists():
-            return False
+            raise HypernetEngineError("Hypernet.pt checkpoint not found under Models/Classifier/")
 
         ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
         dims_rgph = ckpt["dimsrgph"]
@@ -89,12 +101,20 @@ class HypernetEngine:
 
         self.rgph_embedding = MultiEmbedding(dims_rgph)
         self.encdm_embedding = MultiEmbedding(dims_encdm)
+        self.rgph_norm = nn.LayerNorm(rgph_input) if "rgphnorm" in ckpt else None
+        self.encdm_norm = nn.LayerNorm(encdm_input) if "encdmnorm" in ckpt else None
         self.target_net = FunctionalTargetNet(encdm_input, hidden, output)
         self.hypernet = Hypernetwork(rgph_input, self.target_net)
 
         self.rgph_embedding.load_state_dict(ckpt["rgphembedding"])
         self.encdm_embedding.load_state_dict(ckpt["encdmembedding"])
         self.hypernet.load_state_dict(ckpt["hypernet"])
+        if self.rgph_norm is not None:
+            self.rgph_norm.load_state_dict(ckpt["rgphnorm"])
+            self.rgph_norm.eval()
+        if self.encdm_norm is not None:
+            self.encdm_norm.load_state_dict(ckpt["encdmnorm"])
+            self.encdm_norm.eval()
 
         self.rgph_embedding.eval()
         self.encdm_embedding.eval()
@@ -144,7 +164,10 @@ class HypernetEngine:
         key = f"{reg_rgph}_{milieu}"
         ctx = self.strata_context.get(key)
         if ctx is None:
-            ctx = next(iter(self.strata_context.values()))
+            raise HypernetStrataError(
+                f"No RGPH stratum context for region={region_code}, milieu={milieu}. "
+                "Try another region-milieu pair or disable rural transfer."
+            )
         return ctx
 
     @torch.no_grad()
@@ -157,6 +180,8 @@ class HypernetEngine:
         rgph_features = torch.cat(
             [self.rgph_embedding(ctx["cat"]), ctx["num"]], dim=-1
         )
+        if self.rgph_norm is not None:
+            rgph_features = self.rgph_norm(rgph_features)
         weights = self.hypernet(rgph_features)
 
         cat_cols = ENCDM_CONFIG["categorical"]
@@ -170,6 +195,8 @@ class HypernetEngine:
         encdm_features = torch.cat(
             [self.encdm_embedding(encdm_cat), encdm_num], dim=-1
         )
+        if self.encdm_norm is not None:
+            encdm_features = self.encdm_norm(encdm_features)
 
         logits = self.target_net.forward(encdm_features, weights)
         probs = torch.sigmoid(logits).squeeze(0).numpy()
@@ -186,5 +213,8 @@ def get_hypernet_engine(rgph_df):
     global _engine
     if _engine is None:
         _engine = HypernetEngine()
-        _engine.load(rgph_df)
+        try:
+            _engine.load(rgph_df)
+        except HypernetEngineError:
+            _engine._ready = False
     return _engine

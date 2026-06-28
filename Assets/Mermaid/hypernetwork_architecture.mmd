@@ -1,0 +1,82 @@
+%%{init: {'theme': 'base', 'themeVariables': {'fontFamily': 'arial', 'fontSize': '12px', 'primaryColor': '#14213d', 'primaryTextColor': '#ffffff', 'primaryBorderColor': '#000000', 'lineColor': '#fca311', 'secondaryColor': '#e5e5e5', 'tertiaryColor': '#ffffff'}, 'flowchart': {'htmlLabels': true, 'curve': 'basis'}}}%%
+
+flowchart TD
+  subgraph INPUT["Data Sources"]
+    RGPH_DATA["RGPH Census<br/>Categorical + Numerical features<br/>Household weights"]
+    ENCDM_DATA["ENCDM Survey<br/>Categorical + Numerical features<br/>Poverty targets + weights"]
+    CONFIG["Region Bridge<br/>+ Config Dictionaries"]
+  end
+
+  subgraph PREP["Data Preparation"]
+    FILL["Missing value imputation<br/>(mode / median)"]
+    STRATA["Stratum key creation<br/>(Region x Milieu)"]
+  end
+
+  RGPH_DATA --> FILL
+  ENCDM_DATA --> FILL
+  CONFIG --> FILL
+  FILL --> STRATA
+
+  subgraph DATASETS["PyTorch Datasets"]
+    RGPH_DS["RGPH Dataset<br/>(context only)"]
+    ENCDM_TRAIN["ENCDM Train Dataset<br/>(with targets)"]
+    ENCDM_VAL["ENCDM Validation<br/>Dataset"]
+  end
+
+  STRATA --> DATASETS
+
+  subgraph EMBEDDINGS["Embedding Layers"]
+    RGPH_EMB["RGPH Embedding<br/>Categoricals → dense vectors<br/>+ numerical concatenation"]
+    ENCDM_EMB["ENCDM Embedding<br/>Categoricals → dense vectors<br/>+ numerical concatenation"]
+  end
+
+  subgraph HYPERNET["Hypernetwork"]
+    H_MLP["Weight Generator MLP<br/>(Context → Parameters)"]
+    H_SPLIT["Parameter Splitting<br/>Weights + Biases<br/>for target network"]
+    H_MLP --> H_SPLIT
+  end
+
+  subgraph TARGET["Target Network"]
+    T_L1["Hidden Layer<br/>ReLU activation"]
+    T_L2["Output Layer<br/>→ Poverty / Vulnerability logits"]
+    T_L1 --> T_L2
+  end
+
+  subgraph TRAIN["Training Process"]
+    PAIRED["Paired Batch Sampling<br/>Match RGPH / ENCDM<br/>by same stratum"]
+    FORWARD["Forward Pass<br/>RGPH → Embed → Hypernet → Weights<br/>ENCDM → Embed → TargetNet"]
+    LOSS["Weighted Binary Cross-Entropy"]
+    OPT["Adam Optimizer<br/>(12 epochs)"]
+    PAIRED --> FORWARD --> LOSS --> OPT
+  end
+
+  subgraph EVAL["Evaluation"]
+    CONTEXT["Stratum-level<br/>RGPH context prototypes"]
+    INFER["Inference<br/>Per-household probability"]
+    METRICS["Weighted AUC / F1"]
+    CONTEXT --> INFER --> METRICS
+  end
+
+  subgraph SAVE["Serialization"]
+    CKPT["Hypernet.pt checkpoint<br/>All weights + config"]
+  end
+
+  RGPH_DS --> RGPH_EMB
+  RGPH_EMB --> HYPERNET
+  HYPERNET --> TARGET
+  ENCDM_TRAIN --> ENCDM_EMB
+  ENCDM_EMB --> TARGET
+
+  TRAIN --> EVAL
+  EVAL --> SAVE
+
+  classDef data fill:#14213d,stroke:#000000,color:#ffffff
+  classDef config fill:#000000,stroke:#000000,color:#ffffff
+  classDef prep fill:#e5e5e5,stroke:#000000,color:#000000
+  classDef ds fill:#ffffff,stroke:#000000,color:#000000
+  classDef emb fill:#fca311,stroke:#000000,color:#000000
+  classDef hyper fill:#000000,stroke:#000000,color:#ffffff
+  classDef target fill:#14213d,stroke:#000000,color:#ffffff
+  classDef train fill:#e5e5e5,stroke:#000000,color:#000000
+  classDef eval fill:#e5e5e5,stroke:#000000,color:#000000
+  classDef save fill:#fca311,stroke:#000000,color:#000000
