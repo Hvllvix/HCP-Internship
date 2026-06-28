@@ -3,7 +3,7 @@ import sys
 
 import streamlit as st
 
-from data_loader import (
+from Utils.data_loader import (
     GEOJSON_REGIONS,
     ROOT,
     build_code_maps,
@@ -18,8 +18,8 @@ from data_loader import (
     load_raw_rgph,
     load_rgph,
 )
-from hypernet import get_hypernet_engine
-from plots import CHART_H
+from Utils.hypernet import get_hypernet_engine
+from Utils.plots import CHART_H
 
 PKG_DEPS = [
     ("pandas", ">=2.0", "Tabular data"),
@@ -181,7 +181,7 @@ def plot_block(title, desc, fig, h=CHART_H):
         if desc:
             st.markdown(f'<p class="plot-desc">{desc}</p>', unsafe_allow_html=True)
         if fig is not None:
-            st.plotly_chart(fig, use_container_width=True, height=h)
+            st.plotly_chart(fig, width='stretch', height=h)
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -224,7 +224,7 @@ def parse_map_click(event, geoidmap):
 
 
 def render_mermaid(syntax):
-    st.markdown(f"```mermaid\n{syntax.strip()}\n```")
+    st.markdown(f"```mermaid\n{syntax.strip()}\n```", unsafe_allow_html=False)
 
 
 def render_tree():

@@ -7,7 +7,7 @@ import pathlib
 import joblib
 import pandas as pd
 
-ROOT = pathlib.Path(__file__).resolve().parents[1]
+ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 ENCDM_CONFIG = {
     "categorical": [

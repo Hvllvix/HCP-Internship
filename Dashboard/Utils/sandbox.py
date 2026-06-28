@@ -1,8 +1,8 @@
 """Dual-engine inference: LightGBM + Hypernetwork."""
 import pandas as pd
 
-from data_loader import ENCDM_CONFIG, load_all_lgbm, load_encdm, load_scalers_encdm
-from hypernet import HypernetInferenceError, get_hypernet_engine
+from Utils.data_loader import ENCDM_CONFIG, load_all_lgbm, load_encdm, load_scalers_encdm
+from Utils.hypernet import HypernetInferenceError, get_hypernet_engine
 
 
 class InferenceError(Exception):

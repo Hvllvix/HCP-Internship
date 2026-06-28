@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from data_loader import ENCDM_CONFIG, RGPH_CONFIG, ROOT
+from Utils.data_loader import ENCDM_CONFIG, RGPH_CONFIG, ROOT
 
 
 class HypernetInferenceError(Exception):
@@ -156,7 +156,7 @@ class HypernetEngine:
             self._ready = False
 
     def _resolve_context(self, region_code, milieu_code, rural_transfer=False):
-        from data_loader import build_region_bridge
+        from Utils.data_loader import build_region_bridge
 
         milieu = 1 if rural_transfer else int(milieu_code)
         bridge = build_region_bridge()

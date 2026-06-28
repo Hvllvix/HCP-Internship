@@ -6,8 +6,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from sklearn.metrics import roc_auc_score, roc_curve
 
-from data_loader import ENCDM_CONFIG, get_label, household_weights, inverse_scale_encdm, weighted_poverty_rate
-from theme import PALETTE, plotly_layout
+from Utils.data_loader import ENCDM_CONFIG, get_label, household_weights, inverse_scale_encdm, weighted_poverty_rate
+from Utils.theme import PALETTE, plotly_layout
 
 CHART_H = 300
 CHART_H_TALL = 380
@@ -238,13 +238,16 @@ def fig_choropleth(geojson, region_stats, geojson_regions, selected_code=None):
             z_data.append(None)
             hover.append(gname)
 
+    # Apply log scaling to make regional differences more visible
+    z_scaled = [np.log1p(v) if v is not None else None for v in z_data]
+
     bg = PALETTE["bg"]
     fig = go.Figure()
     fig.add_trace(go.Choropleth(
         geojson=geojson,
         featureidkey="properties.cartodb_id",
         locations=locations,
-        z=z_data,
+        z=z_scaled,
         text=hover,
         customdata=custom_ids,
         hovertemplate="<b>%{text}</b><br>Poverty: %{z:.1f}%<extra></extra>",
@@ -507,7 +510,7 @@ def fig_rgph_housing_index(rgph, region_code):
 
 def fig_hypernet_loss():
     import torch
-    from data_loader import ROOT
+    from Utils.data_loader import ROOT
 
     ckpt_path = ROOT / "Models/Classifier/Hypernet.pt"
     if not ckpt_path.exists():

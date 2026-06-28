@@ -4,8 +4,8 @@ Interactive imputation dependency network graphs.
 import numpy as np
 import plotly.graph_objects as go
 
-from data_loader import get_label, load_deps_encdm, load_deps_rgph
-from theme import PALETTE, plotly_layout
+from Utils.data_loader import get_label, load_deps_encdm, load_deps_rgph
+from Utils.theme import PALETTE, plotly_layout
 
 
 def _build_graph(dep_data, title, highlight_node=None):
