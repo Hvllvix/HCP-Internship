@@ -5,7 +5,6 @@ import streamlit as st
 
 from Utils.data_loader import (
     GEOJSON_REGIONS,
-    ROOT,
     build_code_maps,
     build_geo_id_map,
     build_label_maps,
@@ -103,13 +102,6 @@ class Loader:
     @staticmethod
     def geoidmap(geojson):
         return build_geo_id_map(geojson, GEOJSON_REGIONS)
-
-    @staticmethod
-    def tree_text():
-        path = ROOT / "Others" / "tree.txt"
-        if path.exists():
-            return path.read_text(encoding="utf-8")
-        return "Run Scripts/tree.py to generate Others/tree.txt"
 
 
 def _audit_frame(label, df):
@@ -225,12 +217,6 @@ def parse_map_click(event, geoidmap):
 
 def render_mermaid(syntax):
     st.markdown(f"```mermaid\n{syntax.strip()}\n```", unsafe_allow_html=False)
-
-
-def render_tree():
-    st.markdown('<div class="tree-section">', unsafe_allow_html=True)
-    st.code(Loader.tree_text(), language=None)
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def dep_cards(deps, limit=8):

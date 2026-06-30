@@ -608,6 +608,89 @@ def fig_rgph_rooms(rgph, region_code):
     return fig
 
 
+def fig_region_poverty_vs_vulnerability(encdm, region_code):
+    """Scatter of poverty vs vulnerability rates for a region."""
+    sub = encdm[encdm["Région_12"] == region_code]
+    if len(sub) == 0:
+        return None
+    w = household_weights(sub)
+    df = sub.assign(_w=w)
+    rates = df.groupby("Taille_agregée").apply(
+        lambda g: pd.Series({
+            "Poverty": (g["Pauvre"] * g["_w"]).sum() / g["_w"].sum() * 100,
+            "Vulnerability": (g["Vulnérable"] * g["_w"]).sum() / g["_w"].sum() * 100,
+            "Weight": g["_w"].sum(),
+        })
+    ).reset_index()
+    rates.columns = ["Size Category", "Poverty Rate (%)", "Vulnerability Rate (%)", "Weight"]
+    fig = px.scatter(
+        rates, x="Poverty Rate (%)", y="Vulnerability Rate (%)",
+        size="Weight", color="Size Category",
+        color_discrete_sequence=[PALETTE["navy"], PALETTE["amber"], PALETTE["navy_light"], PALETTE["zinc400"]],
+        hover_name="Size Category",
+    )
+    fig.update_layout(**_layout(height=280, showlegend=False))
+    return fig
+
+
+def fig_region_education_gender(encdm, region_code, label_maps):
+    """Education distribution by gender for a region."""
+    sub = encdm[encdm["Région_12"] == region_code].copy()
+    if len(sub) == 0:
+        return None
+    w = household_weights(sub)
+    sub["edu"] = translate_series(sub["Niveau_scolaire_agreg_CM"], "Niveau_scolaire_agreg_CM", label_maps)
+    sub["gender"] = sub["Sexe_CM"].map({0: "Male", 1: "Female"})
+    grouped = sub.assign(_w=w).groupby(["edu", "gender"])["_w"].sum().reset_index()
+    grouped.columns = ["Education", "Gender", "Weight"]
+    fig = px.bar(
+        grouped, x="Education", y="Weight", color="Gender", barmode="group",
+        color_discrete_map={"Male": PALETTE["navy"], "Female": PALETTE["amber"]},
+    )
+    fig.update_layout(**_layout(height=280, legend=dict(orientation="h", y=1.12)))
+    fig.update_xaxes(tickangle=-25)
+    return fig
+
+
+def fig_national_region_comparison(regstats):
+    """All regions compared on urban share, avg age, and hh size."""
+    df = pd.DataFrame([
+        {
+            "Region": r["name"],
+            "Urban Share (%)": r["urban_pct"],
+            "Avg Age": r["avg_age"],
+            "Avg HH Size": r["avg_size"],
+        }
+        for r in regstats.values()
+    ]).sort_values("Urban Share (%)", ascending=False)
+
+    fig = make_subplots(
+        rows=1, cols=3,
+        subplot_titles=("Urban Share (%)", "Average Age", "Avg Household Size"),
+        horizontal_spacing=0.08,
+    )
+    metrics = [
+        ("Urban Share (%)", PALETTE["navy"]),
+        ("Avg Age", PALETTE["amber"]),
+        ("Avg HH Size", PALETTE["navy_light"]),
+    ]
+    for i, (metric, color) in enumerate(metrics, 1):
+        sorted_df = df.sort_values(metric, ascending=False)
+        fig.add_trace(
+            go.Bar(
+                x=sorted_df["Region"], y=sorted_df[metric],
+                marker_color=color,
+                text=[f"{v:.1f}" for v in sorted_df[metric]],
+                textposition="outside",
+                showlegend=False,
+            ),
+            row=1, col=i,
+        )
+        fig.update_xaxes(tickangle=-35, row=1, col=i)
+    fig.update_layout(**_layout(height=380))
+    return fig
+
+
 def fig_national_education(encdm, label_maps):
     w = household_weights(encdm)
     sub = encdm.copy()

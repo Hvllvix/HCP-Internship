@@ -334,6 +334,19 @@ CSS = f"""
         box-shadow: var(--shadow);
     }}
 
+    .page-description {{
+        background: var(--white);
+        border: 1px solid var(--zinc200);
+        border-radius: 10px;
+        padding: 1rem 1.15rem;
+        margin-bottom: 1.25rem;
+        box-shadow: var(--shadow);
+        font-size: 0.88rem;
+        line-height: 1.65;
+        color: var(--zinc700);
+    }}
+    .page-description strong {{ color: var(--navy); }}
+
     .footer {{
         text-align: center;
         padding: 1.5rem 1rem 0.5rem;

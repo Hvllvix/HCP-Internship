@@ -19,7 +19,6 @@ from Utils.plots import (
     fig_contribution_waterfall,
     fig_dataset_dims,
     fig_dual_comparison,
-    fig_employment_mix,
     fig_feature_importance,
     fig_household_size_national,
     fig_hypernet_loss,
@@ -38,7 +37,6 @@ from Utils.plots import (
     fig_rgph_rooms,
     fig_roc_curves,
     fig_urban_rural_poverty,
-    fig_vulnerability_breakdown,
 )
 from Utils.sandbox import InferenceError, run_dual_prediction
 from Utils.theme import inject, metric_row
@@ -48,33 +46,13 @@ from Utils.utils import (
     audit_nulls,
     boot,
     boot_raw,
-    dep_cards,
     parse_map_click,
-    pkg_cards,
     plot_block,
     plot_row,
     print_audit,
     render_mermaid,
-    render_tree,
     safe_plot_row,
 )
-
-# Auto-generate git graph on startup
-try:
-    import subprocess
-    from pathlib import Path
-    result = subprocess.run(
-        ["python", "Scripts/graph.py"],
-        capture_output=True,
-        text=True,
-        check=False
-    )
-    if result.returncode == 0:
-        print("Git graph generated successfully")
-    else:
-        print(f"Git graph generation note: {result.stderr}")
-except Exception:
-    print("Git graph generation skipped")
 
 st.set_page_config(
     page_title="HCP Intelligence | Morocco",
@@ -162,7 +140,7 @@ if nav == "Overview":
 elif nav == "Regional Analytics":
     import importlib
     render_regional = importlib.import_module("Pages.2_Regional_Analysis").render
-    render_regional(encdm, rgph, geojson, regstats, codes, regions, geoidmap)
+    render_regional(encdm, rgph, geojson, regstats, codes, labels, regions, geoidmap)
 
 elif nav == "Predictive Engine":
     import importlib

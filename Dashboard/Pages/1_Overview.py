@@ -1,13 +1,15 @@
 """Overview page module."""
+import subprocess
 import streamlit as st
 
 from Utils.plots import (
+    CHART_H,
     CHART_H_TALL,
     fig_dataset_dims,
     fig_null_counts,
     fig_raw_missing_values,
 )
-from Utils.utils import dep_cards, pkg_cards, render_mermaid, render_tree
+from Utils.utils import render_mermaid
 from Utils.theme import metric_row
 from Utils.data_loader import inverse_scale_encdm, translate, get_label
 from Utils.sandbox import run_dual_prediction
@@ -45,7 +47,7 @@ def render(encdm, rgph, raw_encdm, raw_rgph, nullreport, wpov):
         st.markdown(
             '<p class="prose-block">Official <strong>Haut-Commissariat au Plan</strong> microdata: '
             "ENCDM household consumption (2019-2020) and RGPH census (2014). "
-            "All rates respect inverse-scaled household weights (<code>coef_ménage</code>).</p>",
+            "All rates respect inverse-scaled household weights.</p>",
             unsafe_allow_html=True,
         )
 
@@ -57,21 +59,6 @@ def render(encdm, rgph, raw_encdm, raw_rgph, nullreport, wpov):
             '<a href="https://github.com/Hvllvix/Simpute">GitHub</a>.</p>',
             unsafe_allow_html=True,
         )
-
-    # Side-by-side: Tree + Git Graph
-    c1, c2 = st.columns(2, gap="medium")
-    with c1:
-        st.markdown('<p class="section-heading">Repository Structure</p>', unsafe_allow_html=True)
-        with st.expander("View Repository Structure", expanded=False):
-            render_tree()
-    with c2:
-        st.markdown('<p class="section-heading">Git Graph</p>', unsafe_allow_html=True)
-        try:
-            from pathlib import Path
-            dot_text = Path("Others/git_graph.txt").read_text(encoding="utf-8")
-            st.graphviz_chart(dot_text)
-        except Exception:
-            st.info("Git graph unavailable")
 
     from Utils.utils import plot_row, plot_block
     plot_row([
@@ -91,18 +78,8 @@ def render(encdm, rgph, raw_encdm, raw_rgph, nullreport, wpov):
         "Missing Values Profile (Raw)",
         "Features with zero missing count are omitted.",
         fig_raw_missing_values(raw_encdm, raw_rgph),
-        h=CHART_H_TALL + 40,
+        h=CHART_H,
     )
-
-    with st.container(border=True):
-        st.markdown('<p class="section-heading">Imputation Dependencies</p>', unsafe_allow_html=True)
-        from Utils.data_loader import load_deps_encdm
-        deps = load_deps_encdm()
-        dep_cards(deps)
-
-    with st.container(border=True):
-        st.markdown('<p class="section-heading">Runtime Dependencies</p>', unsafe_allow_html=True)
-        pkg_cards()
 
     st.markdown('<p class="card-eyebrow">Clean Data Preview</p>', unsafe_allow_html=True)
     tab1, tab2 = st.tabs(["ENCDM Survey", "RGPH Census"])

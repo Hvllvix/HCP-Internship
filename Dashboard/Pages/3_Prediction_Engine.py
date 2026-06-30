@@ -20,6 +20,17 @@ def render(encdm, rgph, codes, bundles):
     st.markdown('<h1 class="main-title">Predictive Engine</h1>', unsafe_allow_html=True)
     st.markdown('<p class="hero-subtitle">Dual-Model Inference · LightGBM and Hypernetwork</p>', unsafe_allow_html=True)
 
+    st.markdown(
+        '<div class="page-description">'
+        "Simulate <strong>household poverty and vulnerability</strong> using a dual-model inference stack. "
+        "Configure household characteristics — region, area type, education, employment, age, and household size — "
+        "then run inference through both a <strong>LightGBM</strong> classifier and a <strong>Hypernetwork</strong> "
+        "neural estimator. Compare predicted probabilities, inspect feature contributions, and explore "
+        "counterfactual scenarios via rural transfer simulation."
+        "</div>",
+        unsafe_allow_html=True,
+    )
+
     plot_row([
         (
             "Feature Importance - Poverty",
@@ -64,7 +75,7 @@ def render(encdm, rgph, codes, bundles):
             with r3:
                 age = st.slider("Age", 18, 85, 35)
                 hh_size = st.number_input("Household Size", 1, 15, 4)
-                rural_xfer = st.checkbox("Simulate rural transfer (Hypernet counterfactual)")
+                rural_xfer = st.checkbox("Hypernet counterfactual")
             go_btn = st.form_submit_button("Run dual inference", width='stretch')
 
     if go_btn:
@@ -106,14 +117,11 @@ def render(encdm, rgph, codes, bundles):
             c3.metric("Hypernet Poverty", f"{hpp:.1%}" if hpp is not None else "N/A")
             c4.metric("Hypernet Vulnerability", f"{hvp:.1%}" if hvp is not None else "N/A")
 
-        for flag in res.get("ood_flags", []):
-            st.warning(flag)
-
         plot_row([
             (
-                "Model Comparison (log-scaled)",
-                "log10(probability) exposes variance in low absolute outputs.",
-                fig_dual_comparison(lgbm, hyper, log_scale=True),
+                "Model Comparison",
+                "Direct probability comparison between LightGBM and Hypernetwork.",
+                fig_dual_comparison(lgbm, hyper, log_scale=False),
             ),
             (
                 "Feature Contributions (LGBM)",

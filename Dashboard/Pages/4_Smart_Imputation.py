@@ -14,8 +14,13 @@ def render():
     st.markdown('<p class="hero-subtitle">Adaptive Per-Column Imputation via Simpute</p>', unsafe_allow_html=True)
 
     st.markdown(
-        '<p class="prose-block">Upload a CSV with missing values. Simpute selects the optimal '
-        "imputation strategy per column (KNN, LightGBM, or statistical) and returns a clean dataset.</p>",
+        '<div class="page-description">'
+        "Upload a CSV dataset with missing values and let <strong>Simpute</strong> — the adaptive per-column "
+        "imputation library — intelligently handle them. For each column with gaps, Simpute selects the optimal "
+        "strategy among <strong>KNN</strong>, <strong>LightGBM</strong>, or statistical imputation based on "
+        "data characteristics. Review the imputation results, inspect before/after metrics, and download the "
+        "cleaned dataset for downstream analysis."
+        "</div>",
         unsafe_allow_html=True,
     )
 
@@ -27,16 +32,6 @@ def render():
             '<a href="https://github.com/Hvllvix/Simpute">GitHub</a>.</p>',
             unsafe_allow_html=True,
         )
-        st.markdown('<p class="section-heading">Simpute Repository Structure</p>', unsafe_allow_html=True)
-        try:
-            from pathlib import Path
-            simpute_tree = Path("Others/simpute_tree.txt").read_text(encoding="utf-8")
-            st.markdown('<div class="tree-section">', unsafe_allow_html=True)
-            st.code(simpute_tree, language=None)
-            st.markdown("</div>", unsafe_allow_html=True)
-        except Exception:
-            st.info("Simpute tree unavailable (Others/simpute_tree.txt missing)")
-
     st.markdown('<p class="card-eyebrow">Simpute API Reference</p>', unsafe_allow_html=True)
     with st.container(border=True):
         st.markdown(
@@ -66,13 +61,45 @@ def render():
         uploaded = st.file_uploader("Upload CSV", type=["csv"], key="simpute_upload")
         if uploaded:
             df = pd.read_csv(uploaded)
-            c1, c2 = st.columns(2)
+            nulls_before = int(df.isna().sum().sum())
+            c1, c2, c3 = st.columns(3)
             with c1:
                 st.metric("Rows", f"{len(df):,}")
             with c2:
                 st.metric("Columns", f"{len(df.columns):,}")
-            nulls_before = int(df.isna().sum().sum())
-            st.metric("Missing Values", f"{nulls_before:,}")
+            with c3:
+                st.metric("Missing Values", f"{nulls_before:,}")
+
+            # Show null counts per column
+            null_counts = df.isna().sum()
+            null_cols = null_counts[null_counts > 0]
+            if len(null_cols) > 0:
+                null_df = pd.DataFrame({
+                    "Column": null_cols.index,
+                    "Missing Values": null_cols.values,
+                    "Missing %": (null_cols.values / len(df) * 100).round(1),
+                }).sort_values("Missing Values", ascending=False)
+                try:
+                    import plotly.express as px
+                    from Utils.theme import PALETTE
+                    fig = px.bar(
+                        null_df, x="Column", y="Missing Values",
+                        color="Missing %",
+                        color_continuous_scale=[PALETTE["zinc400"], PALETTE["amber"], PALETTE["navy"]],
+                        text_auto=",",
+                        hover_data={"Missing %": ":.1f"},
+                    )
+                    fig.update_layout(
+                        title="Missing Values per Column",
+                        xaxis_tickangle=-35,
+                        height=350,
+                    )
+                    fig.update_traces(textposition="outside")
+                    st.plotly_chart(fig, width='stretch')
+                except Exception:
+                    st.dataframe(null_df, width='stretch')
+            else:
+                st.success("No missing values detected in the uploaded dataset.")
 
             if st.button("Run Smart Imputation", type="primary", width='stretch'):
                 with st.spinner("Imputing..."):

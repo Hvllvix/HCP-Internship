@@ -7,29 +7,37 @@ from Utils.plots import (
     compute_region_stats,
     fig_age_distribution,
     fig_choropleth,
-    fig_employment_mix,
     fig_milieu_split,
     fig_national_education,
     fig_national_employment,
     fig_poverty_breakdown,
-    fig_raw_missing_values,
     fig_region_amenities,
     fig_region_education,
+    fig_region_education_gender,
     fig_region_gender,
     fig_region_household_size,
     fig_region_poverty,
     fig_rgph_infrastructure,
     fig_rgph_rooms,
     fig_urban_rural_poverty,
-    fig_vulnerability_breakdown,
 )
-from Utils.utils import safe_plot_row, parse_map_click
+from Utils.utils import plot_block, safe_plot_row, parse_map_click
 from Utils.theme import metric_row
 
 
-def render(encdm, rgph, geojson, regstats, codes, regions, geoidmap):
+def render(encdm, rgph, geojson, regstats, codes, labels, regions, geoidmap):
     st.markdown('<h1 class="main-title">Regional Analytics</h1>', unsafe_allow_html=True)
     st.markdown('<p class="hero-subtitle">Spatial Socioeconomic Profiles Across Morocco</p>', unsafe_allow_html=True)
+
+    st.markdown(
+        '<div class="page-description">'
+        "Explore <strong>regional poverty and vulnerability</strong> across Morocco's 12 administrative regions. "
+        "Click any region on the interactive choropleth to reveal localized demographic, education, employment, "
+        "housing, and infrastructure indicators. National-level summaries provide context for comparing "
+        "regional disparities in weighted poverty shares, education attainment, and household characteristics."
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
     try:
         sel = int(st.session_state.sel_reg)
@@ -50,6 +58,7 @@ def render(encdm, rgph, geojson, regstats, codes, regions, geoidmap):
             st.session_state.sel_reg = name_to_code[pick]
             st.rerun()
 
+        # ── Morocco Choropleth Map ──
         with st.container(border=True):
             st.markdown('<p class="section-heading">Morocco Poverty Choropleth</p>', unsafe_allow_html=True)
             mapfig = fig_choropleth(geojson, regstats, GEOJSON_REGIONS, selected_code=sel)
@@ -84,39 +93,55 @@ def render(encdm, rgph, geojson, regstats, codes, regions, geoidmap):
             unsafe_allow_html=True,
         )
 
-        st.markdown('<p class="card-eyebrow">National Structure</p>', unsafe_allow_html=True)
-        safe_plot_row([
-            ("Weighted Poverty Split", "National weighted poverty shares.", lambda: fig_poverty_breakdown(encdm)),
-            ("Vulnerability Split", "National vulnerability shares.", lambda: fig_vulnerability_breakdown(encdm)),
-        ])
-        safe_plot_row([
-            ("National Education", "Weighted education distribution.", lambda: fig_national_education(encdm, codes)),
-            ("National Employment", "Top employment categories.", lambda: fig_national_employment(encdm, codes)),
-        ], h=CHART_H_TALL)
-        safe_plot_row([
-            ("Household Size (National)", "Inverse-scaled ENCDM sizes.", lambda: __import__('Utils.plots', fromlist=['fig_household_size_national']).fig_household_size_national(encdm)),
-            ("RGPH Asset Access", "National infrastructure rates.", lambda: fig_rgph_infrastructure(rgph)),
-        ])
-
-        st.markdown(f'<p class="card-eyebrow">Regional Profile - {selname}</p>', unsafe_allow_html=True)
+        # ── Dynamic Plots (update with region selection, right below map) ──
+        st.markdown(f'<h2 class="main-title" style="font-size:1.3rem;">Regional Profile — {selname}</h2>', unsafe_allow_html=True)
+        st.markdown(
+            '<p class="prose-block">The panels below update dynamically based on the region selected in the choropleth map above. '
+            'Explore age structure, education attainment, infrastructure access, and socioeconomic composition for '
+            f'<strong>{selname}</strong>.</p>',
+            unsafe_allow_html=True,
+        )
         safe_plot_row([
             ("Age Distribution", f"Ages in {selname}.", lambda: fig_age_distribution(encdm, sel)),
-            ("Education Structure", f"Education in {selname}.", lambda: fig_region_education(encdm, sel, codes)),
-            ("Amenity Access (RGPH)", f"Infrastructure in {selname}.", lambda: fig_region_amenities(rgph, sel)),
+            ("Education Structure", f"Education in {selname}.", lambda: fig_region_education(encdm, sel, labels)),
         ], ctx=f"Regional Profile {selname}")
         safe_plot_row([
-            ("Urban / Rural Poverty", "Poverty by milieu.", lambda: fig_urban_rural_poverty(encdm, regions)),
-            ("Poverty Rate by Region", "Regional ranking.", lambda: fig_region_poverty(regstats)),
-        ], h=CHART_H_TALL, ctx=f"Regional Compare {selname}")
+            ("Amenity Access (RGPH)", f"Infrastructure in {selname}.", lambda: fig_region_amenities(rgph, sel)),
+            ("Education by Gender", f"Education split by gender in {selname}.", lambda: fig_region_education_gender(encdm, sel, labels)),
+        ], ctx=f"Regional Profile {selname}")
         safe_plot_row([
-            ("Employment Mix", f"Employment in {selname}.", lambda: fig_employment_mix(encdm, sel, codes)),
             ("Urban-Rural Composition", f"Milieu split in {selname}.", lambda: fig_milieu_split(encdm, sel)),
-            ("Household Size", f"HH sizes in {selname}.", lambda: fig_region_household_size(encdm, sel)),
-        ], ctx=f"Regional Demographics {selname}")
-        safe_plot_row([
             ("Gender Representation", f"Gender shares in {selname}.", lambda: fig_region_gender(encdm, sel)),
+        ], ctx=f"Regional Profile {selname}")
+        safe_plot_row([
+            ("Household Size", f"HH sizes in {selname}.", lambda: fig_region_household_size(encdm, sel)),
             ("Housing - Room Count", f"Rooms in {selname}.", lambda: fig_rgph_rooms(rgph, sel)),
-        ], ctx=f"Regional Housing {selname}")
+        ], ctx=f"Regional Profile {selname}")
+
+        # ── Static Plots (national overview, separated) ──
+        st.markdown('<hr style="margin:1.5rem 0;border-color:var(--zinc200);">', unsafe_allow_html=True)
+        st.markdown('<h2 class="main-title" style="font-size:1.3rem;">National & Cross-Region Overview</h2>', unsafe_allow_html=True)
+        st.markdown(
+            '<p class="prose-block">Static summaries of national poverty distribution, education attainment, employment categories, '
+            'household characteristics, and regional rankings. These panels provide context-independent benchmarks for '
+            'comparing against the selected region\'s profile above.</p>',
+            unsafe_allow_html=True,
+        )
+        safe_plot_row([
+            ("Weighted Poverty Split", "National weighted poverty shares.", lambda: fig_poverty_breakdown(encdm)),
+            ("National Education", "Weighted education distribution.", lambda: fig_national_education(encdm, labels)),
+        ])
+        safe_plot_row([
+            ("National Employment", "Top employment categories.", lambda: fig_national_employment(encdm, labels)),
+            ("Household Size (National)", "Inverse-scaled ENCDM sizes.", lambda: __import__('Utils.plots', fromlist=['fig_household_size_national']).fig_household_size_national(encdm)),
+        ])
+        safe_plot_row([
+            ("RGPH Asset Access", "National infrastructure rates.", lambda: fig_rgph_infrastructure(rgph)),
+            ("Poverty Rate by Region", "Regional ranking.", lambda: fig_region_poverty(regstats)),
+        ])
+        safe_plot_row([
+            ("Urban / Rural Poverty by Region", "Poverty by milieu across regions.", lambda: fig_urban_rural_poverty(encdm, regions)),
+        ])
 
     except Exception as exc:
         st.error(f"Regional Analytics failed for region code {st.session_state.sel_reg}: {exc}")
